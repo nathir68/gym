@@ -59,7 +59,171 @@
         Plus
       } from 'lucide-react';
 
-      // 1. Procedural 3D Dumbbell Component (Same clean design, no orange wireframe circles)
+      // ========================================================
+      // 1. ANIMATION WRAPPERS & PLUGINS
+      // ========================================================
+
+      // Scroll Reveal Component (using Intersection Observer)
+      function ScrollReveal({ children, className = '', type = 'reveal-up', delay = '' }) {
+        const ref = useRef(null);
+        const [isVisible, setIsVisible] = useState(false);
+
+        useEffect(() => {
+          const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+              setIsVisible(true);
+              observer.unobserve(entry.target);
+            }
+          }, { threshold: 0.1 });
+
+          if (ref.current) {
+            observer.observe(ref.current);
+          }
+          return () => observer.disconnect();
+        }, []);
+
+        return (
+          <div 
+            ref={ref} 
+            className={`reveal ${type} ${delay} ${isVisible ? 'is-visible' : ''} ${className}`}
+          >
+            {children}
+          </div>
+        );
+      }
+
+      // Count Up Component for counting statistics numbers
+      function CountUp({ end, duration = 1500, suffix = '' }) {
+        const ref = useRef(null);
+        const [count, setCount] = useState(0);
+        const [hasStarted, setHasStarted] = useState(false);
+
+        useEffect(() => {
+          const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+              setHasStarted(true);
+              observer.unobserve(entry.target);
+            }
+          }, { threshold: 0.1 });
+
+          if (ref.current) observer.observe(ref.current);
+          return () => observer.disconnect();
+        }, []);
+
+        useEffect(() => {
+          if (!hasStarted) return;
+          const endNum = parseInt(end.replace(/[^0-9]/g, '')) || 0;
+          if (endNum === 0) {
+            setCount(end);
+            return;
+          }
+          
+          let start = 0;
+          const startTime = performance.now();
+
+          const updateCount = (now) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(1, elapsed / duration);
+            
+            // Ease out quad formula
+            const easeProgress = progress * (2 - progress);
+            const current = Math.floor(easeProgress * endNum);
+            
+            setCount(current);
+
+            if (progress < 1) {
+              requestAnimationFrame(updateCount);
+            } else {
+              setCount(endNum);
+            }
+          };
+
+          requestAnimationFrame(updateCount);
+        }, [hasStarted, end, duration]);
+
+        return (
+          <span ref={ref} style={{ fontFamily: 'monospace' }}>
+            {count.toLocaleString()}{suffix}
+          </span>
+        );
+      }
+
+      // Floating Canvas Particles background
+      function HeroParticles() {
+        const canvasRef = useRef(null);
+
+        useEffect(() => {
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          let animationId;
+
+          const resize = () => {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+          };
+          resize();
+          window.addEventListener('resize', resize);
+
+          const particleCount = 35;
+          const particles = [];
+          for (let i = 0; i < particleCount; i++) {
+            particles.push({
+              x: Math.random() * canvas.width,
+              y: Math.random() * canvas.height,
+              radius: Math.random() * 2 + 1,
+              vx: (Math.random() - 0.5) * 0.6,
+              vy: (Math.random() - 0.5) * 0.6,
+              alpha: Math.random() * 0.4 + 0.1
+            });
+          }
+
+          const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach((p) => {
+              p.x += p.vx;
+              p.y += p.vy;
+
+              if (p.x < 0) p.x = canvas.width;
+              if (p.x > canvas.width) p.x = 0;
+              if (p.y < 0) p.y = canvas.height;
+              if (p.y > canvas.height) p.y = 0;
+
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(255, 87, 34, ${p.alpha})`; // neon orange
+              ctx.fill();
+            });
+
+            animationId = requestAnimationFrame(animate);
+          };
+          animate();
+
+          return () => {
+            window.removeEventListener('resize', resize);
+            cancelAnimationFrame(animationId);
+          };
+        }, []);
+
+        return (
+          <canvas 
+            ref={canvasRef} 
+            style={{ 
+              position: 'absolute', 
+              inset: 0, 
+              pointerEvents: 'none', 
+              opacity: 0.4, 
+              zIndex: 0 
+            }} 
+          />
+        );
+      }
+
+      // ========================================================
+      // 2. 3D DUMBBELL MODEL
+      // ========================================================
+
       function DumbbellMesh({ sizeMode, neonColor }) {
         const groupRef = useRef();
         const { mouse } = useThree();
@@ -195,7 +359,10 @@
         );
       }
 
-      // 2. Workout Split Planner (Communicates with Python Flask API)
+      // ========================================================
+      // 3. WORKOUT PLANNER
+      // ========================================================
+
       function WorkoutPlanner() {
         const [activeGoal, setActiveGoal] = useState('SHRED');
         const [activeFreq, setActiveFreq] = useState('dedicated');
@@ -246,7 +413,7 @@
               ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifycontent: 'center', gap: '12px', marginBottom: '32px', flexWrap: 'wrap', justifyContent: 'center' }}>
               {['rookie', 'dedicated', 'beast'].map((freq) => (
                 <button key={freq} onClick={() => setActiveFreq(freq)} style={{
                   backgroundColor: activeFreq === freq ? 'var(--primary)' : '#121217',
@@ -262,18 +429,20 @@
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
                 {plan.map((p, idx) => (
-                  <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: currentTheme.accent }} />
-                    <h4 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '16px', fontFamily: 'var(--font-heading)' }}>{p.day}</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {p.exercises.map((ex, exIdx) => (
-                        <div key={exIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
-                          <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: '500' }}>{ex.name}</span>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>{ex.sets} × {ex.reps}</span>
-                        </div>
-                      ))}
+                  <ScrollReveal key={idx} type="reveal-scale" delay={`delay-${(idx + 1) * 100}`}>
+                    <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '20px', position: 'relative', overflow: 'hidden', height: '100%' }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: currentTheme.accent }} />
+                      <h4 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '16px', fontFamily: 'var(--font-heading)' }}>{p.day}</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {p.exercises.map((ex, exIdx) => (
+                          <div key={exIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: '500' }}>{ex.name}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>{ex.sets} × {ex.reps}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  </ScrollReveal>
                 ))}
               </div>
             )}
@@ -281,7 +450,10 @@
         );
       }
 
-      // 3. BMI & Macro Calculator (Communicates with Python Flask API)
+      // ========================================================
+      // 4. BIOMETRIC CALCULATOR
+      // ========================================================
+
       function MacroCalculator() {
         const [weight, setWeight] = useState(80);
         const [height, setHeight] = useState(180);
@@ -291,8 +463,9 @@
         const [goal, setGoal] = useState('maintain');
 
         const [results, setResults] = useState({ bmi: 0, bmiStatus: 'Normal', calories: 2800, protein: 176, carbs: 320, fat: 77 });
+        const [displayCalories, setDisplayCalories] = useState(0);
 
-        // Query the Flask API on input changes
+        // Fetch inputs mapping calculations in python server
         useEffect(() => {
           fetch('/api/calculate-macros', {
             method: 'POST',
@@ -304,6 +477,32 @@
             if (!data.error) setResults(data);
           });
         }, [weight, height, age, gender, activity, goal]);
+
+        // Easing interpolation timer for smoothly counting calories numbers
+        useEffect(() => {
+          let startVal = displayCalories;
+          const endVal = results.calories;
+          if (startVal === endVal) return;
+
+          const stepsTime = 300;
+          const startStamp = performance.now();
+
+          const animateCalories = (now) => {
+            const progress = Math.min(1, (now - startStamp) / stepsTime);
+            // Ease out quad
+            const easeVal = progress * (2 - progress);
+            const current = Math.floor(startVal + (endVal - startVal) * easeVal);
+            setDisplayCalories(current);
+
+            if (progress < 1) {
+              requestAnimationFrame(animateCalories);
+            } else {
+              setDisplayCalories(endVal);
+            }
+          };
+
+          requestAnimationFrame(animateCalories);
+        }, [results.calories]);
 
         const getBmiColor = () => {
           if (results.bmiStatus === 'Normal') return '#d4ff00';
@@ -408,7 +607,7 @@
 
                   <div style={{ background: 'linear-gradient(135deg, #181822 0%, #121217 100%)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '20px', textAlign: 'center', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.1em' }}>DAILY ENERGY TARGET</span>
-                    <h2 className="text-display glow-text" style={{ fontSize: '3rem', color: 'var(--primary)', marginTop: '8px', letterSpacing: '0.02em' }}>{results.calories} <span style={{ fontSize: '1rem', color: '#fff', fontFamily: 'var(--font-heading)' }}>KCAL</span></h2>
+                    <h2 className="text-display glow-text" style={{ fontSize: '3rem', color: 'var(--primary)', marginTop: '8px', letterSpacing: '0.02em' }}>{displayCalories} <span style={{ fontSize: '1rem', color: '#fff', fontFamily: 'var(--font-heading)' }}>KCAL</span></h2>
                   </div>
                 </div>
 
@@ -421,7 +620,7 @@
                         <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.protein}g</span>
                       </div>
                       <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${(results.protein * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px' }} />
+                        <div style={{ width: `${(results.protein * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
                       </div>
                     </div>
 
@@ -431,7 +630,7 @@
                         <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.carbs}g</span>
                       </div>
                       <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${(results.carbs * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: '#d4ff00', borderRadius: '4px' }} />
+                        <div style={{ width: `${(results.carbs * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: '#d4ff00', borderRadius: '4px', transition: 'width 0.4s ease' }} />
                       </div>
                     </div>
 
@@ -441,7 +640,7 @@
                         <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.fat}g</span>
                       </div>
                       <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${(results.fat * 9 / results.calories) * 100}%`, height: '100%', backgroundColor: '#00f2fe', borderRadius: '4px' }} />
+                        <div style={{ width: `${(results.fat * 9 / results.calories) * 100}%`, height: '100%', backgroundColor: '#00f2fe', borderRadius: '4px', transition: 'width 0.4s ease' }} />
                       </div>
                     </div>
                   </div>
@@ -452,14 +651,16 @@
         );
       }
 
-      // 4. Class Scheduler (Communicates with Python Flask API)
+      // ========================================================
+      // 5. CLASS SCHEDULER
+      // ========================================================
+
       function ClassScheduler({ onBookSpot }) {
         const [selectedDay, setSelectedDay] = useState('MONDAY');
         const [schedule, setSchedule] = useState({});
         const [bookedClasses, setBookedClasses] = useState([]);
         const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
-        // Pull initial classes from Flask
         useEffect(() => {
           fetch('/api/classes')
           .then(res => res.json())
@@ -510,44 +711,46 @@
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {currentClasses.map((cls) => {
+              {currentClasses.map((cls, idx) => {
                 const isBooked = bookedClasses.includes(cls.id);
                 const spotsLeft = cls.capacity - cls.booked;
                 const percentage = (cls.booked / cls.capacity) * 100;
                 const isFull = spotsLeft <= 0;
 
                 return (
-                  <div key={cls.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    backgroundColor: 'rgba(255, 255, 255, 0.01)', border: isBooked ? '1px solid var(--primary-glow)' : '1px solid rgba(255, 255, 255, 0.04)',
-                    borderRadius: '8px', padding: '20px', flexWrap: 'wrap', gap: '16px'
-                  }}>
-                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flex: '1 1 300px' }}>
-                      <div style={{ minWidth: '70px', textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.08)', paddingRight: '20px', color: 'var(--primary)', fontFamily: 'monospace', fontWeight: '700', fontSize: '0.85rem' }}>{cls.time.split(' - ')[0]}</div>
-                      <div>
-                        <h4 style={{ color: '#fff', fontSize: '1.15rem', marginBottom: '4px', fontFamily: 'var(--font-heading)' }}>{cls.name}</h4>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Coach: <strong style={{ color: '#fff' }}>{cls.instructor}</strong></span>
+                  <ScrollReveal key={cls.id} type="reveal-up" delay={`delay-${(idx + 1) * 100}`}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      backgroundColor: 'rgba(255, 255, 255, 0.01)', border: isBooked ? '1px solid var(--primary-glow)' : '1px solid rgba(255, 255, 255, 0.04)',
+                      borderRadius: '8px', padding: '20px', flexWrap: 'wrap', gap: '16px', transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flex: '1 1 300px' }}>
+                        <div style={{ minWidth: '70px', textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.08)', paddingRight: '20px', color: 'var(--primary)', fontFamily: 'monospace', fontWeight: '700', fontSize: '0.85rem' }}>{cls.time.split(' - ')[0]}</div>
+                        <div>
+                          <h4 style={{ color: '#fff', fontSize: '1.15rem', marginBottom: '4px', fontFamily: 'var(--font-heading)' }}>{cls.name}</h4>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Coach: <strong style={{ color: '#fff' }}>{cls.instructor}</strong></span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '180px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                        <span style={{ color: isFull ? '#ef4444' : 'var(--text-secondary)' }}>{isFull ? 'FULLY BOOKED' : `${spotsLeft} spots available`}</span>
-                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{cls.booked}/{cls.capacity}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '180px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                          <span style={{ color: isFull ? '#ef4444' : 'var(--text-secondary)' }}>{isFull ? 'FULLY BOOKED' : `${spotsLeft} spots available`}</span>
+                          <span style={{ color: '#fff', fontFamily: 'monospace' }}>{cls.booked}/{cls.capacity}</span>
+                        </div>
+                        <div style={{ height: '6px', backgroundColor: '#131317', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: isBooked ? 'var(--primary)' : isFull ? '#ef4444' : '#d4ff00', borderRadius: '3px', transition: 'width 0.5s ease' }} />
+                        </div>
                       </div>
-                      <div style={{ height: '6px', backgroundColor: '#131317', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: isBooked ? 'var(--primary)' : isFull ? '#ef4444' : '#d4ff00', borderRadius: '3px' }} />
-                      </div>
-                    </div>
 
-                    <button disabled={isBooked || isFull} onClick={() => handleBook(selectedDay, cls.id, cls.name, cls.instructor)} style={{
-                      backgroundColor: isBooked ? 'rgba(212, 255, 0, 0.15)' : isFull ? '#222' : 'transparent',
-                      border: isBooked ? '1px solid #d4ff00' : isFull ? '1px solid #333' : '1px solid var(--primary)',
-                      color: isBooked ? '#d4ff00' : isFull ? '#555' : '#fff', padding: '10px 24px', borderRadius: '6px',
-                      cursor: isBooked || isFull ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: '700',
-                      letterSpacing: '0.05em', transition: 'var(--transition-smooth)'
-                    }}>{isBooked ? '✓ SELECTED' : isFull ? 'LOCKED' : 'BOOK SPOT'}</button>
-                  </div>
+                      <button disabled={isBooked || isFull} onClick={() => handleBook(selectedDay, cls.id, cls.name, cls.instructor)} style={{
+                        backgroundColor: isBooked ? 'rgba(212, 255, 0, 0.15)' : isFull ? '#222' : 'transparent',
+                        border: isBooked ? '1px solid #d4ff00' : isFull ? '1px solid #333' : '1px solid var(--primary)',
+                        color: isBooked ? '#d4ff00' : isFull ? '#555' : '#fff', padding: '10px 24px', borderRadius: '6px',
+                        cursor: isBooked || isFull ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: '700',
+                        letterSpacing: '0.05em', transition: 'var(--transition-smooth)'
+                      }}>{isBooked ? '✓ SELECTED' : isFull ? 'LOCKED' : 'BOOK SPOT'}</button>
+                    </div>
+                  </ScrollReveal>
                 );
               })}
             </div>
@@ -555,7 +758,10 @@
         );
       }
 
-      // 5. Before/After Transformation Slider
+      // ========================================================
+      // 6. TRANSFORMATION SLIDER
+      // ========================================================
+
       function TransformationSlider() {
         const [sliderPos, setSliderPos] = useState(50);
         const containerRef = useRef(null);
@@ -637,7 +843,10 @@
         );
       }
 
-      // 6. Main App Component
+      // ========================================================
+      // 7. MAIN LAYOUT
+      // ========================================================
+
       function App() {
         const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
         const [isJoinSuccess, setIsJoinSuccess] = useState(false);
@@ -705,29 +914,60 @@
             </header>
 
             {/* Hero Section */}
-            <section id="hero" className="hero-gradient" style={{ padding: '60px 24px', position: 'relative', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'center' }}>
-                <div>
-                  <span className="badge badge-primary" style={{ width: 'fit-content', marginBottom: '12px' }}>⚡ PYTHON FLASK BACKEND ACTIVE</span>
-                  <h1 className="text-display" style={{ fontSize: 'clamp(3rem, 6vw, 4.8rem)', lineHeight: '0.9', color: '#fff' }}>
-                    STRENGTH IS EARNED.<br />
-                    <span className="shimmer-text">DO HARD.</span>
-                  </h1>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.5', maxWidth: '520px', marginTop: '16px' }}>
-                    A full-stack implementation running on a Python web server. Explore interactive WebGL rendering powered by Flask API endpoints.
-                  </p>
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px' }}>
-                    <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-primary">CLAIM 3-DAY PASS</button>
-                    <button onClick={() => handleScrollToSection('classes')} className="btn btn-secondary">VIEW CLASS BOARD</button>
+            <section id="hero" className="hero-gradient" style={{ padding: '60px 24px', position: 'relative', borderBottom: '1px solid rgba(255, 255, 255, 0.03)', overflow: 'hidden' }}>
+              <HeroParticles />
+              
+              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                
+                {/* Hero left details */}
+                <ScrollReveal type="reveal-left">
+                  <div>
+                    <span className="badge badge-primary" style={{ width: 'fit-content', marginBottom: '12px' }}>⚡ PYTHON FLASK BACKEND ACTIVE</span>
+                    <h1 className="text-display" style={{ fontSize: 'clamp(3rem, 6vw, 4.8rem)', lineHeight: '0.9', color: '#fff' }}>
+                      STRENGTH IS EARNED.<br />
+                      <span className="shimmer-text">DO HARD.</span>
+                    </h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.5', maxWidth: '520px', marginTop: '16px' }}>
+                      A full-stack implementation running on a Python web server. Explore interactive WebGL rendering powered by Flask API endpoints.
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px' }}>
+                      <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-primary">CLAIM 3-DAY PASS</button>
+                      <button onClick={() => handleScrollToSection('classes')} className="btn btn-secondary">VIEW CLASS BOARD</button>
+                    </div>
                   </div>
-                </div>
+                </ScrollReveal>
 
-                <div className="titanium-card" style={{ height: '420px', padding: '0', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, #111116 0%, #070709 100%)', border: '1px solid rgba(255, 87, 34, 0.15)' }}>
-                  <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 5 }}>
-                    <span className="badge badge-secondary" style={{ animation: 'pulseGlow 2s infinite ease-in-out' }}>INTERACTIVE R3F WEBGL</span>
+                {/* Hero right interactive canvas */}
+                <ScrollReveal type="reveal-right">
+                  <div className="titanium-card" style={{ height: '420px', padding: '0', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, #111116 0%, #070709 100%)', border: '1px solid rgba(255, 87, 34, 0.15)' }}>
+                    <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 5 }}>
+                      <span className="badge badge-secondary" style={{ animation: 'pulseGlow 2s infinite ease-in-out' }}>INTERACTIVE R3F WEBGL</span>
+                    </div>
+                    <Dumbbell3D />
                   </div>
-                  <Dumbbell3D />
-                </div>
+                </ScrollReveal>
+              </div>
+            </section>
+
+            {/* Stats Counter Section */}
+            <section style={{ backgroundColor: '#070709', borderBottom: '1px solid rgba(255,255,255,0.03)', position: 'relative', zIndex: 2 }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
+                {[
+                  { value: '15000', label: 'ACTIVE DISCIPLES', suffix: '+', desc: 'Pushing limits daily' },
+                  { value: '50', label: 'ELITE STRENGTH COACHES', suffix: '+', desc: 'Olympic & powerlifting athletes' },
+                  { value: '24/7', isStatic: true, label: 'ZERO CLOSED HOURS', desc: 'No excuses, train anytime' },
+                  { value: '5', label: 'METROPOLIS ZONES', suffix: '', desc: 'Access any training ground' }
+                ].map((stat, idx) => (
+                  <ScrollReveal key={idx} type="reveal-scale" delay={`delay-${(idx + 1) * 100}`}>
+                    <div className="titanium-card" style={{ padding: '24px', border: '1px solid rgba(255, 255, 255, 0.03)', textAlign: 'center', height: '100%' }}>
+                      <h2 className="text-display" style={{ fontSize: '2.5rem', color: 'var(--primary)' }}>
+                        {stat.isStatic ? stat.value : <CountUp end={stat.value} suffix={stat.suffix} />}
+                      </h2>
+                      <h4 style={{ fontSize: '0.85rem', color: '#fff', margin: '4px 0 2px 0', letterSpacing: '0.05em' }}>{stat.label}</h4>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{stat.desc}</p>
+                    </div>
+                  </ScrollReveal>
+                ))}
               </div>
             </section>
 
@@ -744,10 +984,12 @@
                   { title: 'CRYO COOLING CHAMBER', desc: 'Sub-zero saunas at -110°C to accelerate muscular repair.' },
                   { title: 'PROTEIN BAR AND AMINOS', desc: 'Clean protein formulas and raw hydration mixes.' }
                 ].map((item, idx) => (
-                  <div key={idx} className="titanium-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <h3 style={{ color: '#fff', fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>{item.title}</h3>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
-                  </div>
+                  <ScrollReveal key={idx} type="reveal-up" delay={`delay-${(idx + 1) * 100}`}>
+                    <div className="titanium-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
+                      <h3 style={{ color: '#fff', fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>{item.title}</h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
+                    </div>
+                  </ScrollReveal>
                 ))}
               </div>
             </section>
@@ -755,25 +997,33 @@
             {/* Splits */}
             <section id="splits" style={{ padding: '80px 24px', backgroundColor: '#0a0a0e', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
               <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <WorkoutPlanner />
+                <ScrollReveal type="reveal-scale">
+                  <WorkoutPlanner />
+                </ScrollReveal>
               </div>
             </section>
 
             {/* Classes */}
             <section id="classes" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto' }}>
-              <ClassScheduler onBookSpot={handleBookSpot} />
+              <ScrollReveal type="reveal-scale">
+                <ClassScheduler onBookSpot={handleBookSpot} />
+              </ScrollReveal>
             </section>
 
             {/* Calculator */}
             <section id="calculator" style={{ padding: '80px 24px', backgroundColor: '#0a0a0e', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
               <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <MacroCalculator />
+                <ScrollReveal type="reveal-scale">
+                  <MacroCalculator />
+                </ScrollReveal>
               </div>
             </section>
 
             {/* Transformation */}
             <section id="transformation" style={{ padding: '80px 24px', maxWidth: '640px', margin: '0 auto' }}>
-              <TransformationSlider />
+              <ScrollReveal type="reveal-up">
+                <TransformationSlider />
+              </ScrollReveal>
             </section>
 
             {/* Trainers */}
@@ -788,16 +1038,18 @@
                   { name: "ELENA VLASOV", role: "Director of Mobility", bio: "Olympic weightlifting specialist. Focuses on kinetics and recovery." },
                   { name: "MARCUS THORNE", role: "Tactical Conditioning", bio: "Ex-military stamina coach. Focuses on HIIT work and GPP capacity." }
                 ].map((coach, idx) => (
-                  <div key={idx} className="titanium-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '320px', overflow: 'hidden' }}>
-                    <div style={{ padding: '24px', background: 'linear-gradient(135deg, #1f1f2e 0%, #111116 100%)' }}>
-                      <h4 style={{ color: '#fff', fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>{coach.name}</h4>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 'bold' }}>{coach.role}</span>
+                  <ScrollReveal key={idx} type="reveal-up" delay={`delay-${(idx + 1) * 100}`}>
+                    <div className="titanium-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '320px', overflow: 'hidden' }}>
+                      <div style={{ padding: '24px', background: 'linear-gradient(135deg, #1f1f2e 0%, #111116 100%)' }}>
+                        <h4 style={{ color: '#fff', fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>{coach.name}</h4>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 'bold' }}>{coach.role}</span>
+                      </div>
+                      <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{coach.bio}</p>
+                        <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-secondary" style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>BOOK CONSULTATION</button>
+                      </div>
                     </div>
-                    <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{coach.bio}</p>
-                      <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-secondary" style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>BOOK CONSULTATION</button>
-                    </div>
-                  </div>
+                  </ScrollReveal>
                 ))}
               </div>
             </section>
@@ -825,7 +1077,7 @@
             <div className="toast-container">
               {toasts.map((t) => (
                 <div key={t.id} className="toast">
-                  <div style={{ backgroundColor: 'rgba(255, 87, 34, 0.15)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>✔</div>
+                  <div style={{ backgroundColor: 'rgba(255, 87, 34, 0.15)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifycontent: 'center', color: 'var(--primary)', justifyContent: 'center' }}>✔</div>
                   <div>
                     <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)', letterSpacing: '0.05em' }}>{t.title}</div>
                     <div style={{ fontSize: '0.8rem', color: '#fff', marginTop: '2px' }}>{t.message}</div>
@@ -836,7 +1088,7 @@
 
             {/* Join Modal */}
             {isJoinModalOpen && (
-              <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setIsJoinModalOpen(false)}>
+              <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifycontent: 'center', padding: '20px', justifyContent: 'center' }} onClick={() => setIsJoinModalOpen(false)}>
                 <div className="titanium-card pulse-glow" style={{ width: '100%', maxWidth: '480px', backgroundColor: '#0a0a0f', border: '2px solid var(--primary)', borderRadius: '12px', padding: '32px', position: 'relative' }} onClick={e => e.stopPropagation()}>
                   <button onClick={() => setIsJoinModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', backgroundColor: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '1.4rem', cursor: 'pointer' }}>✕</button>
                   {isJoinSuccess ? (
