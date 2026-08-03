@@ -253,5 +253,7 @@ def get_classes():
     return jsonify(CLASS_DATABASE)
 
 if __name__ == '__main__':
-    print("DO HARD Gym server launching at http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    import os
+    port = int(os.environ.get('PORT', 8080))
+    print(f"DO HARD Gym server launching at http://localhost:{port}")
+    app.run(host='0.0.0.0', port=port, debug=True)
