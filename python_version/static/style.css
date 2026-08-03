@@ -378,24 +378,24 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .reveal-up {
-  transform: translateY(40px);
+  transform: translateY(40px) perspective(800px) rotateX(10deg);
 }
 
 .reveal-left {
-  transform: translateX(-40px);
+  transform: translateX(-40px) perspective(800px) rotateY(-10deg);
 }
 
 .reveal-right {
-  transform: translateX(40px);
+  transform: translateX(40px) perspective(800px) rotateY(10deg);
 }
 
 .reveal-scale {
-  transform: scale(0.96);
+  transform: scale(0.96) perspective(800px) rotateX(-5deg);
 }
 
 .reveal.is-visible {
   opacity: 1;
-  transform: translate(0) scale(1);
+  transform: translate(0) scale(1) rotateX(0deg) rotateY(0deg);
 }
 
 /* Delay modifiers */
