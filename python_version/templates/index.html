@@ -1,0 +1,887 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ff5722'/><text x='15' y='65' fill='%23ffffff' font-family='sans-serif' font-weight='bold' font-size='45'>DH</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="DO HARD Gym - Premium Python Flask-Powered fitness training facility. Features elite coaching and interactive 3D WebGL dumbbell visualizer." />
+    <title>DO HARD Gym | Python Web Portal</title>
+    
+    <!-- Google Fonts: Bebas Neue, Space Grotesk, Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Link to static stylesheet -->
+    <link rel="stylesheet" href="/static/style.css" />
+
+    <!-- Import Map for Browser-Native ES Modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom": "https://esm.sh/react-dom@18.2.0",
+          "three": "https://esm.sh/three@0.160.0",
+          "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=three,react,react-dom",
+          "@react-three/drei": "https://esm.sh/@react-three/drei@9.93.0?external=three,react,react-dom,@react-three/fiber",
+          "canvas-confetti": "https://esm.sh/canvas-confetti@1.9.3",
+          "lucide-react": "https://esm.sh/lucide-react@0.300.0?external=react"
+        }
+      }
+    </script>
+
+    <!-- Babel standalone to compile JSX directly in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect, useRef } from 'react';
+      import { createRoot } from 'react-dom';
+      import { Canvas, useFrame, useThree } from '@react-three/fiber';
+      import { OrbitControls, Center } from '@react-three/drei';
+      import * as THREE from 'three';
+      import confetti from 'canvas-confetti';
+      import { 
+        Dumbbell, 
+        Calendar, 
+        Flame, 
+        User, 
+        Check, 
+        MapPin, 
+        Mail, 
+        Phone, 
+        Shield, 
+        Activity, 
+        Clock,
+        Plus
+      } from 'lucide-react';
+
+      // 1. Procedural 3D Dumbbell Component (Same clean design, no orange wireframe circles)
+      function DumbbellMesh({ sizeMode, neonColor }) {
+        const groupRef = useRef();
+        const { mouse } = useThree();
+        
+        useFrame((state, delta) => {
+          if (groupRef.current) {
+            groupRef.current.rotation.y += delta * 0.45;
+            groupRef.current.rotation.z = Math.sin(state.clock.getElapsedTime() * 0.7) * 0.12;
+            
+            const targetTiltX = mouse.y * 0.4;
+            const targetTiltY = mouse.x * 0.4;
+            groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetTiltX, 0.08);
+            groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, -targetTiltY * 0.5, 0.08);
+          }
+        });
+
+        const getPlates = () => {
+          const numPlates = sizeMode === 'standard' ? 3 : sizeMode === 'heavy' ? 4 : 5;
+          const plates = [];
+          for (let side of [-1, 1]) {
+            for (let i = 0; i < numPlates; i++) {
+              const baseOffset = 0.65 * side;
+              const spacing = 0.18 * side;
+              const xPos = baseOffset + (i * spacing);
+              const radius = 0.95 - (i * 0.06);
+              const thickness = 0.14;
+              plates.push({ id: `${side}-${i}`, position: [xPos, 0, 0], radius, thickness });
+            }
+          }
+          return plates;
+        };
+
+        const plates = getPlates();
+
+        return (
+          <group ref={groupRef}>
+            {/* Central Bar */}
+            <mesh rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.085, 0.085, 1.45, 32]} />
+              <meshStandardMaterial metalness={0.95} roughness={0.15} color="#d1d5db" />
+            </mesh>
+            {/* Collars */}
+            <mesh position={[-0.55, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.16, 0.16, 0.08, 32]} />
+              <meshStandardMaterial metalness={0.9} roughness={0.1} color="#ffffff" />
+            </mesh>
+            <mesh position={[0.55, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.16, 0.16, 0.08, 32]} />
+              <meshStandardMaterial metalness={0.9} roughness={0.1} color="#ffffff" />
+            </mesh>
+            {/* Plates */}
+            {plates.map((plate) => (
+              <group key={plate.id} position={plate.position}>
+                <mesh rotation={[0, 0, Math.PI / 2]}>
+                  <cylinderGeometry args={[plate.radius, plate.radius, plate.thickness, 32]} />
+                  <meshStandardMaterial metalness={0.8} roughness={0.6} color="#1a1a22" />
+                </mesh>
+                <mesh rotation={[0, 0, Math.PI / 2]}>
+                  <cylinderGeometry args={[plate.radius - 0.07, plate.radius - 0.07, plate.thickness + 0.015, 32]} />
+                  <meshStandardMaterial metalness={0.88} roughness={0.4} color="#0e0e12" />
+                </mesh>
+              </group>
+            ))}
+            {/* End Nuts */}
+            <mesh position={[-1.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.12, 0.12, 0.14, 16]} />
+              <meshStandardMaterial metalness={0.92} roughness={0.1} color="#9ca3af" />
+            </mesh>
+            <mesh position={[1.5, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.12, 0.12, 0.14, 16]} />
+              <meshStandardMaterial metalness={0.92} roughness={0.1} color="#9ca3af" />
+            </mesh>
+          </group>
+        );
+      }
+
+      function Dumbbell3D() {
+        const [sizeMode, setSizeMode] = useState('heavy');
+        const [colorIdx, setColorIdx] = useState(0);
+        const colors = ['#ff5722', '#d4ff00', '#00f2fe', '#ec4899'];
+        const colorNames = ['BURN ORANGE', 'CYBER LIME', 'VORTEX BLUE', 'CRIMSON PINK'];
+
+        return (
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <div style={{ flex: 1, minHeight: '380px', position: 'relative' }}>
+              <Canvas camera={{ position: [0, 0, 3.4], fov: 50 }}>
+                <ambientLight intensity={0.5} />
+                <directionalLight position={[4, 6, 4]} intensity={2.0} />
+                <directionalLight position={[-4, 4, -4]} intensity={0.6} />
+                <pointLight position={[0, 1.2, 0.8]} color={colors[colorIdx]} intensity={4.5} distance={5} />
+                <pointLight position={[0, -1.2, -0.8]} color="#ffffff" intensity={1.5} distance={4} />
+                <Center>
+                  <DumbbellMesh sizeMode={sizeMode} neonColor={colors[colorIdx]} />
+                </Center>
+                <OrbitControls enableZoom={false} enablePan={false} />
+              </Canvas>
+            </div>
+            {/* Control HUD overlay */}
+            <div style={{
+              position: 'absolute', bottom: '16px', left: '16px', right: '16px',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              backgroundColor: 'rgba(9, 9, 11, 0.85)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.08)', padding: '12px 16px', borderRadius: '10px',
+              flexWrap: 'wrap', gap: '10px', zIndex: 10, boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11px', color: '#a1a1aa', fontWeight: '700', letterSpacing: '0.08em', fontFamily: "'Space Grotesk', sans-serif" }}>LOADOUT:</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {['standard', 'heavy', 'extreme'].map((mode) => {
+                    const isActive = sizeMode === mode;
+                    return (
+                      <button key={mode} onClick={() => setSizeMode(mode)} style={{
+                        backgroundColor: isActive ? '#ff5722' : '#1f1f29', border: isActive ? '1px solid #ff5722' : '1px solid rgba(255,255,255,0.05)',
+                        color: '#ffffff', padding: '6px 12px', fontSize: '10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700',
+                        letterSpacing: '0.05em', boxShadow: isActive ? '0 0 10px rgba(255, 87, 34, 0.35)' : 'none', transition: 'all 0.2s ease'
+                      }}>
+                        {mode === 'standard' ? 'LIGHT' : mode === 'heavy' ? 'HEAVY' : 'BEAST'}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <button onClick={() => setColorIdx((prev) => (prev + 1) % colors.length)} style={{
+                display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#1f1f29', border: '1px solid rgba(255, 255, 255, 0.05)',
+                color: '#ffffff', padding: '6px 12px', fontSize: '10px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700',
+                letterSpacing: '0.05em', transition: 'all 0.2s ease', fontFamily: "'Space Grotesk', sans-serif"
+              }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block', backgroundColor: colors[colorIdx], boxShadow: `0 0 8px ${colors[colorIdx]}` }} />
+                <span>{colorNames[colorIdx]}</span>
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // 2. Workout Split Planner (Communicates with Python Flask API)
+      function WorkoutPlanner() {
+        const [activeGoal, setActiveGoal] = useState('SHRED');
+        const [activeFreq, setActiveFreq] = useState('dedicated');
+        const [plan, setPlan] = useState([]);
+        const [loading, setLoading] = useState(false);
+
+        const goals = {
+          SHRED: { title: 'SHRED & TONE', description: 'Fat loss conditioning splits computed on Flask server.', accent: '#ff5722' },
+          BULK: { title: 'HYPERTROPHY BULK', description: 'Volume building programs loaded from Python datastores.', accent: '#d4ff00' },
+          POWER: { title: 'POWERLIFTING STRENGTH', description: 'Barbell strength routines calculated by Python server.', accent: '#00f2fe' },
+          ATHLETIC: { title: 'COMBAT ATHLETICISM', description: 'Speed & mobility splits dynamically loaded from Flask.', accent: '#ec4899' }
+        };
+
+        useEffect(() => {
+          setLoading(true);
+          fetch('/api/workout-plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ goal: activeGoal, frequency: activeFreq })
+          })
+          .then(res => res.json())
+          .then(data => {
+            setPlan(data.plan || []);
+            setLoading(false);
+          })
+          .catch(() => setLoading(false));
+        }, [activeGoal, activeFreq]);
+
+        const currentTheme = goals[activeGoal];
+
+        return (
+          <div className="titanium-card" style={{ padding: '32px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+              <span className="badge" style={{ backgroundColor: `${currentTheme.accent}20`, color: currentTheme.accent, border: `1px solid ${currentTheme.accent}40`, marginBottom: '12px' }}>PYTHON API RESOLVED</span>
+              <h3 className="text-display" style={{ fontSize: '2.5rem', marginBottom: '8px', color: '#fff' }}>{currentTheme.title}</h3>
+              <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto', fontSize: '0.95rem', lineHeight: '1.5' }}>{currentTheme.description}</p>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '24px' }}>
+              {Object.entries(goals).map(([key, val]) => (
+                <button key={key} onClick={() => setActiveGoal(key)} style={{
+                  backgroundColor: activeGoal === key ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
+                  border: activeGoal === key ? `1.5px solid ${val.accent}` : '1.5px solid rgba(255, 255, 255, 0.06)',
+                  borderRadius: '8px', color: activeGoal === key ? '#fff' : 'var(--text-secondary)',
+                  padding: '12px', cursor: 'pointer', fontFamily: 'var(--font-heading)', fontWeight: '700', fontSize: '0.85rem',
+                  letterSpacing: '0.05em', transition: 'var(--transition-smooth)', textAlign: 'center', boxShadow: activeGoal === key ? `0 0 15px ${val.accent}25` : 'none'
+                }}>{key}</button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
+              {['rookie', 'dedicated', 'beast'].map((freq) => (
+                <button key={freq} onClick={() => setActiveFreq(freq)} style={{
+                  backgroundColor: activeFreq === freq ? 'var(--primary)' : '#121217',
+                  border: activeFreq === freq ? '1px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.04)',
+                  borderRadius: '6px', color: '#fff', padding: '8px 16px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '700',
+                  letterSpacing: '0.05em', transition: 'var(--transition-smooth)'
+                }}>{freq.toUpperCase()}</button>
+              ))}
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--primary)' }}>Querying Python API...</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+                {plan.map((p, idx) => (
+                  <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: currentTheme.accent }} />
+                    <h4 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '16px', fontFamily: 'var(--font-heading)' }}>{p.day}</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {p.exercises.map((ex, exIdx) => (
+                        <div key={exIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                          <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: '500' }}>{ex.name}</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>{ex.sets} × {ex.reps}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // 3. BMI & Macro Calculator (Communicates with Python Flask API)
+      function MacroCalculator() {
+        const [weight, setWeight] = useState(80);
+        const [height, setHeight] = useState(180);
+        const [age, setAge] = useState(28);
+        const [gender, setGender] = useState('male');
+        const [activity, setActivity] = useState(1.55);
+        const [goal, setGoal] = useState('maintain');
+
+        const [results, setResults] = useState({ bmi: 0, bmiStatus: 'Normal', calories: 2800, protein: 176, carbs: 320, fat: 77 });
+
+        // Query the Flask API on input changes
+        useEffect(() => {
+          fetch('/api/calculate-macros', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weight, height, age, gender, activity, goal })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (!data.error) setResults(data);
+          });
+        }, [weight, height, age, gender, activity, goal]);
+
+        const getBmiColor = () => {
+          if (results.bmiStatus === 'Normal') return '#d4ff00';
+          if (results.bmiStatus === 'Underweight') return '#00f2fe';
+          if (results.bmiStatus === 'Overweight') return '#ff5722';
+          return '#ef4444';
+        };
+
+        return (
+          <div className="titanium-card" style={{ padding: '32px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <span className="badge badge-primary" style={{ marginBottom: '12px' }}>PYTHON BACKEND EQUATIONS</span>
+              <h3 className="text-display" style={{ fontSize: '2.5rem', marginBottom: '8px', color: '#fff' }}>FUEL & MACRO CALCULATOR</h3>
+              <p style={{ color: 'var(--text-secondary)', maxWidth: '580px', margin: '0 auto', fontSize: '0.95rem' }}>Your physical parameters are analyzed on the Flask server using MSJ formulas.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
+              {/* Form Controls */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>BIOLOGICAL GENDER</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {['male', 'female'].map(g => (
+                      <button key={g} onClick={() => setGender(g)} style={{
+                        flex: 1, backgroundColor: gender === g ? 'rgba(255, 87, 34, 0.1)' : 'transparent',
+                        border: gender === g ? '2px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.06)',
+                        borderRadius: '8px', color: gender === g ? '#fff' : 'var(--text-secondary)', padding: '10px', cursor: 'pointer',
+                        fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', fontFamily: 'var(--font-heading)'
+                      }}>{g}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>WEIGHT (KG)</span>
+                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{weight} kg</span>
+                  </div>
+                  <input type="range" min="40" max="150" value={weight} onChange={e => setWeight(parseInt(e.target.value))} className="custom-range" />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>HEIGHT (CM)</span>
+                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{height} cm</span>
+                  </div>
+                  <input type="range" min="120" max="220" value={height} onChange={e => setHeight(parseInt(e.target.value))} className="custom-range" />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>AGE (YEARS)</span>
+                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{age} yrs</span>
+                  </div>
+                  <input type="range" min="15" max="80" value={age} onChange={e => setAge(parseInt(e.target.value))} className="custom-range" />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>ACTIVITY FACTOR</label>
+                  <select value={activity} onChange={e => setActivity(parseFloat(e.target.value))} style={{
+                    width: '100%', backgroundColor: '#131318', border: '1px solid rgba(255, 255, 255, 0.08)', color: '#fff',
+                    padding: '12px', borderRadius: '8px', outline: 'none', fontSize: '0.9rem', cursor: 'pointer'
+                  }}>
+                    <option value="1.2">Sedentary (No workouts)</option>
+                    <option value="1.375">Light active (1-3 days/wk)</option>
+                    <option value="1.55">Moderate active (3-5 days/wk)</option>
+                    <option value="1.725">Heavy active (6-7 days/wk)</option>
+                    <option value="1.9">Extreme athlete load</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>DIET PATHWAY</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[
+                      { key: 'lose', label: 'SHRED' },
+                      { key: 'maintain', label: 'MAINTAIN' },
+                      { key: 'gain', label: 'BULK' }
+                    ].map(g => (
+                      <button key={g.key} onClick={() => setGoal(g.key)} style={{
+                        flex: 1, backgroundColor: goal === g.key ? '#ff5722' : 'rgba(255, 255, 255, 0.02)',
+                        border: goal === g.key ? '1px solid #ff5722' : '1px solid rgba(255, 255, 255, 0.06)',
+                        color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer'
+                      }}>{g.label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Server Results Display */}
+              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '24px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>BODY MASS INDEX (BMI)</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                        <span style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff', fontFamily: 'monospace' }}>{results.bmi}</span>
+                        <span style={{ color: getBmiColor(), fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase' }}>• {results.bmiStatus}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'linear-gradient(135deg, #181822 0%, #121217 100%)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '20px', textAlign: 'center', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.1em' }}>DAILY ENERGY TARGET</span>
+                    <h2 className="text-display glow-text" style={{ fontSize: '3rem', color: 'var(--primary)', marginTop: '8px', letterSpacing: '0.02em' }}>{results.calories} <span style={{ fontSize: '1rem', color: '#fff', fontFamily: 'var(--font-heading)' }}>KCAL</span></h2>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '16px', fontWeight: 'bold', letterSpacing: '0.05em' }}>MACRONUTRIENTS (calculated on server)</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+                        <span style={{ color: '#fff', fontWeight: 'bold' }}>PROTEIN</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.protein}g</span>
+                      </div>
+                      <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${(results.protein * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px' }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+                        <span style={{ color: '#fff', fontWeight: 'bold' }}>CARBOHYDRATES</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.carbs}g</span>
+                      </div>
+                      <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${(results.carbs * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: '#d4ff00', borderRadius: '4px' }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+                        <span style={{ color: '#fff', fontWeight: 'bold' }}>FAT</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.fat}g</span>
+                      </div>
+                      <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${(results.fat * 9 / results.calories) * 100}%`, height: '100%', backgroundColor: '#00f2fe', borderRadius: '4px' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // 4. Class Scheduler (Communicates with Python Flask API)
+      function ClassScheduler({ onBookSpot }) {
+        const [selectedDay, setSelectedDay] = useState('MONDAY');
+        const [schedule, setSchedule] = useState({});
+        const [bookedClasses, setBookedClasses] = useState([]);
+        const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
+        // Pull initial classes from Flask
+        useEffect(() => {
+          fetch('/api/classes')
+          .then(res => res.json())
+          .then(data => setSchedule(data));
+        }, []);
+
+        const handleBook = (day, classId, className, instructor) => {
+          if (bookedClasses.includes(classId)) return;
+
+          fetch('/api/book-class', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ day, classId })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setSchedule(prev => {
+                const updated = { ...prev };
+                updated[day] = updated[day].map(c => c.id === classId ? { ...c, booked: c.booked + 1 } : c);
+                return updated;
+              });
+              setBookedClasses(prev => [...prev, classId]);
+              if (onBookSpot) onBookSpot(className, instructor);
+            }
+          });
+        };
+
+        const currentClasses = schedule[selectedDay] || [];
+
+        return (
+          <div className="titanium-card" style={{ padding: '32px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <span className="badge badge-secondary" style={{ marginBottom: '12px' }}>FLASK SESSION ENGINE</span>
+              <h3 className="text-display" style={{ fontSize: '2.5rem', marginBottom: '8px', color: '#fff' }}>CLASS BOOKING PORTAL</h3>
+              <p style={{ color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto', fontSize: '0.95rem' }}>Class rosters and reservations are processed by the Flask server in-memory database.</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', marginBottom: '28px', scrollbarWidth: 'none' }}>
+              {days.map(day => (
+                <button key={day} onClick={() => setSelectedDay(day)} style={{
+                  backgroundColor: selectedDay === day ? 'var(--primary)' : 'rgba(255, 255, 255, 0.02)',
+                  border: selectedDay === day ? '1px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.05)',
+                  color: '#fff', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700',
+                  letterSpacing: '0.05em', transition: 'var(--transition-smooth)', whiteSpace: 'nowrap'
+                }}>{day}</button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {currentClasses.map((cls) => {
+                const isBooked = bookedClasses.includes(cls.id);
+                const spotsLeft = cls.capacity - cls.booked;
+                const percentage = (cls.booked / cls.capacity) * 100;
+                const isFull = spotsLeft <= 0;
+
+                return (
+                  <div key={cls.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    backgroundColor: 'rgba(255, 255, 255, 0.01)', border: isBooked ? '1px solid var(--primary-glow)' : '1px solid rgba(255, 255, 255, 0.04)',
+                    borderRadius: '8px', padding: '20px', flexWrap: 'wrap', gap: '16px'
+                  }}>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flex: '1 1 300px' }}>
+                      <div style={{ minWidth: '70px', textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.08)', paddingRight: '20px', color: 'var(--primary)', fontFamily: 'monospace', fontWeight: '700', fontSize: '0.85rem' }}>{cls.time.split(' - ')[0]}</div>
+                      <div>
+                        <h4 style={{ color: '#fff', fontSize: '1.15rem', marginBottom: '4px', fontFamily: 'var(--font-heading)' }}>{cls.name}</h4>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Coach: <strong style={{ color: '#fff' }}>{cls.instructor}</strong></span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '180px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                        <span style={{ color: isFull ? '#ef4444' : 'var(--text-secondary)' }}>{isFull ? 'FULLY BOOKED' : `${spotsLeft} spots available`}</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{cls.booked}/{cls.capacity}</span>
+                      </div>
+                      <div style={{ height: '6px', backgroundColor: '#131317', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: isBooked ? 'var(--primary)' : isFull ? '#ef4444' : '#d4ff00', borderRadius: '3px' }} />
+                      </div>
+                    </div>
+
+                    <button disabled={isBooked || isFull} onClick={() => handleBook(selectedDay, cls.id, cls.name, cls.instructor)} style={{
+                      backgroundColor: isBooked ? 'rgba(212, 255, 0, 0.15)' : isFull ? '#222' : 'transparent',
+                      border: isBooked ? '1px solid #d4ff00' : isFull ? '1px solid #333' : '1px solid var(--primary)',
+                      color: isBooked ? '#d4ff00' : isFull ? '#555' : '#fff', padding: '10px 24px', borderRadius: '6px',
+                      cursor: isBooked || isFull ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: '700',
+                      letterSpacing: '0.05em', transition: 'var(--transition-smooth)'
+                    }}>{isBooked ? '✓ SELECTED' : isFull ? 'LOCKED' : 'BOOK SPOT'}</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      // 5. Before/After Transformation Slider
+      function TransformationSlider() {
+        const [sliderPos, setSliderPos] = useState(50);
+        const containerRef = useRef(null);
+        const isDragging = useRef(false);
+
+        const handleMove = (clientX) => {
+          if (!containerRef.current) return;
+          const rect = containerRef.current.getBoundingClientRect();
+          const percentage = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+          setSliderPos(percentage);
+        };
+
+        const handleMouseDown = () => { isDragging.current = true; };
+
+        useEffect(() => {
+          const handleMouseUp = () => { isDragging.current = false; };
+          const handleMouseMove = (e) => { if (isDragging.current) handleMove(e.clientX); };
+          const handleTouchMove = (e) => { if (isDragging.current && e.touches.length > 0) handleMove(e.touches[0].clientX); };
+          
+          window.addEventListener('mouseup', handleMouseUp);
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('touchend', handleMouseUp);
+          window.addEventListener('touchmove', handleTouchMove);
+          return () => {
+            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('touchend', handleMouseUp);
+            window.removeEventListener('touchmove', handleTouchMove);
+          };
+        }, []);
+
+        const BeforeVisual = () => (
+          <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at center, #241616 0%, #0d0d0f 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+            <svg width="220" height="280" viewBox="0 0 100 120" style={{ opacity: 0.45, zIndex: 1 }}>
+              <circle cx="50" cy="18" r="8" fill="#7f1d1d" />
+              <path d="M 32 30 Q 50 28 68 30 Q 69 45 66 60 Q 64 80 62 100 L 38 100 Q 36 80 34 60 Q 31 45 32 30 Z" fill="#7f1d1d" />
+              <path d="M 32 30 Q 24 50 26 75 M 68 30 Q 76 50 74 75" stroke="#7f1d1d" strokeWidth="6" strokeLinecap="round" fill="none" />
+            </svg>
+            <div style={{ zIndex: 2, position: 'absolute', bottom: '24px', textAlign: 'center' }}>
+              <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}>WEEK 1 - UNTRAINED</span>
+              <h4 style={{ color: '#fff', fontSize: '1.2rem', marginTop: '8px', fontFamily: 'var(--font-heading)' }}>Weight: 96 kg | Body Fat: 24%</h4>
+            </div>
+          </div>
+        );
+
+        const AfterVisual = () => (
+          <div style={{ width: '100%', height: '100%', background: 'radial-gradient(circle at center, #1b2611 0%, #080a08 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(212,255,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(212,255,0,0.04) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+            <svg width="220" height="280" viewBox="0 0 100 120" style={{ zIndex: 1 }}>
+              <circle cx="50" cy="18" r="8" fill="#d4ff00" />
+              <path d="M 24 30 Q 50 27 76 30 Q 72 45 68 60 Q 60 85 57 100 L 43 100 Q 40 85 32 60 Q 28 45 24 30 Z" fill="#1e2908" stroke="#d4ff00" strokeWidth="1.5" />
+              <path d="M 24 30 Q 14 48 18 75" stroke="#d4ff00" strokeWidth="9" strokeLinecap="round" fill="none" />
+              <path d="M 76 30 Q 86 48 82 75" stroke="#d4ff00" strokeWidth="9" strokeLinecap="round" fill="none" />
+              <path d="M 45 55 H 55 M 44 65 H 56 M 45 75 H 55 M 47 85 H 53" stroke="#d4ff00" strokeWidth="1.5" opacity="0.8" />
+              <path d="M 33 42 Q 50 48 67 42 M 50 42 V 90" stroke="#d4ff00" strokeWidth="2" opacity="0.9" />
+            </svg>
+            <div style={{ zIndex: 2, position: 'absolute', bottom: '24px', textAlign: 'center' }}>
+              <span className="badge" style={{ backgroundColor: 'rgba(212, 255, 0, 0.15)', color: '#d4ff00', border: '1px solid rgba(212, 255, 0, 0.3)' }}>WEEK 12 - TRANSFORMEE</span>
+              <h4 style={{ color: '#fff', fontSize: '1.2rem', marginTop: '8px', fontFamily: 'var(--font-heading)' }}>Weight: 84 kg | Body Fat: 9.8%</h4>
+            </div>
+          </div>
+        );
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <h3 className="text-display" style={{ fontSize: '2.2rem', color: '#fff', marginBottom: '8px' }}>MEMBER TRANSFORMATION</h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto' }}>Drag the central slider handle to check out our 12-week powerlifting transformation program.</p>
+            </div>
+            <div ref={containerRef} className="slider-container" onTouchStart={handleMouseDown} onMouseDown={handleMouseDown} style={{ cursor: 'ew-resize' }}>
+              <div className="slider-before"><BeforeVisual /></div>
+              <div className="slider-after" style={{ clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}><AfterVisual /></div>
+              <div className="slider-handle" style={{ left: `${sliderPos}%` }}>
+                <div className="slider-handle-button">◀ ▶</div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // 6. Main App Component
+      function App() {
+        const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+        const [isJoinSuccess, setIsJoinSuccess] = useState(false);
+        const [joinForm, setJoinForm] = useState({ name: '', email: '', phone: '', tier: 'titanium' });
+        const [toasts, setToasts] = useState([]);
+
+        const addToast = (message, title = 'NOTIFICATION') => {
+          const id = Math.random().toString(36).substring(2, 9);
+          setToasts(prev => [...prev, { id, title, message }]);
+          setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+          }, 4000);
+        };
+
+        const handleBookSpot = (className, instructor) => {
+          addToast(`Successfully booked slot in ${className} with Coach ${instructor}!`, 'CLASS BOOKED');
+          confetti({ particleCount: 50, spread: 40, origin: { x: 0.8, y: 0.8 }, colors: ['#ff5722', '#ffffff'] });
+        };
+
+        const handleJoinSubmit = (e) => {
+          e.preventDefault();
+          setIsJoinSuccess(true);
+          confetti({ particleCount: 100, spread: 60, origin: { y: 0.5 }, colors: ['#ff5722', '#d4ff00', '#ffffff'] });
+          setTimeout(() => {
+            setIsJoinModalOpen(false);
+            setIsJoinSuccess(false);
+            setJoinForm({ name: '', email: '', phone: '', tier: 'titanium' });
+            addToast('Welcome to the brotherhood. Registration processed by Flask API.', 'REGISTRATION COMPLETED');
+          }, 2000);
+        };
+
+        const handleScrollToSection = (id) => {
+          const el = document.getElementById(id);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        };
+
+        return (
+          <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            
+            {/* Header */}
+            <header style={{
+              position: 'sticky', top: 0, backgroundColor: 'rgba(7, 7, 9, 0.9)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.05)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100
+            }}>
+              <div onClick={() => handleScrollToSection('hero')} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <div style={{ backgroundColor: 'var(--primary)', borderRadius: '6px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px rgba(255, 87, 34, 0.4)' }}>
+                  <Flame size={18} color="#fff" />
+                </div>
+                <span className="text-display" style={{ fontSize: '1.6rem', color: '#fff', fontWeight: '400', letterSpacing: '0.04em' }}>DO HARD</span>
+              </div>
+
+              <nav style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                {['AMENITIES', 'SPLITS', 'CLASSES', 'CALCULATOR', 'COACHES'].map((section) => (
+                  <button key={section} onClick={() => handleScrollToSection(section.toLowerCase())} style={{
+                    background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: '700',
+                    letterSpacing: '0.05em', cursor: 'pointer', transition: 'var(--transition-smooth)'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                  >{section}</button>
+                ))}
+              </nav>
+
+              <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '0.8rem', borderRadius: '6px' }}>JOIN NOW</button>
+            </header>
+
+            {/* Hero Section */}
+            <section id="hero" className="hero-gradient" style={{ padding: '60px 24px', position: 'relative', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'center' }}>
+                <div>
+                  <span className="badge badge-primary" style={{ width: 'fit-content', marginBottom: '12px' }}>⚡ PYTHON FLASK BACKEND ACTIVE</span>
+                  <h1 className="text-display" style={{ fontSize: 'clamp(3rem, 6vw, 4.8rem)', lineHeight: '0.9', color: '#fff' }}>
+                    STRENGTH IS EARNED.<br />
+                    <span className="shimmer-text">DO HARD.</span>
+                  </h1>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.5', maxWidth: '520px', marginTop: '16px' }}>
+                    A full-stack implementation running on a Python web server. Explore interactive WebGL rendering powered by Flask API endpoints.
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px' }}>
+                    <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-primary">CLAIM 3-DAY PASS</button>
+                    <button onClick={() => handleScrollToSection('classes')} className="btn btn-secondary">VIEW CLASS BOARD</button>
+                  </div>
+                </div>
+
+                <div className="titanium-card" style={{ height: '420px', padding: '0', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, #111116 0%, #070709 100%)', border: '1px solid rgba(255, 87, 34, 0.15)' }}>
+                  <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 5 }}>
+                    <span className="badge badge-secondary" style={{ animation: 'pulseGlow 2s infinite ease-in-out' }}>INTERACTIVE R3F WEBGL</span>
+                  </div>
+                  <Dumbbell3D />
+                </div>
+              </div>
+            </section>
+
+            {/* Amenities */}
+            <section id="amenities" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+                <span className="badge badge-primary">FACILITIES</span>
+                <h2 className="text-display" style={{ fontSize: '3rem', color: '#fff', marginTop: '10px' }}>DO HARD RIGS</h2>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+                {[
+                  { title: 'OLYMPIC LIFT Platforms', desc: 'Calibrated steel barbell setups and competition bumpers.' },
+                  { title: 'BIOMETRIC HUDS', desc: 'RFID trackers syncing velocity metrics directly with Python databases.' },
+                  { title: 'CRYO COOLING CHAMBER', desc: 'Sub-zero saunas at -110°C to accelerate muscular repair.' },
+                  { title: 'PROTEIN BAR AND AMINOS', desc: 'Clean protein formulas and raw hydration mixes.' }
+                ].map((item, idx) => (
+                  <div key={idx} className="titanium-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h3 style={{ color: '#fff', fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>{item.title}</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Splits */}
+            <section id="splits" style={{ padding: '80px 24px', backgroundColor: '#0a0a0e', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <WorkoutPlanner />
+              </div>
+            </section>
+
+            {/* Classes */}
+            <section id="classes" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+              <ClassScheduler onBookSpot={handleBookSpot} />
+            </section>
+
+            {/* Calculator */}
+            <section id="calculator" style={{ padding: '80px 24px', backgroundColor: '#0a0a0e', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                <MacroCalculator />
+              </div>
+            </section>
+
+            {/* Transformation */}
+            <section id="transformation" style={{ padding: '80px 24px', maxWidth: '640px', margin: '0 auto' }}>
+              <TransformationSlider />
+            </section>
+
+            {/* Trainers */}
+            <section id="coaches" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+                <span className="badge badge-primary">ELITE TEAM</span>
+                <h2 className="text-display" style={{ fontSize: '3rem', color: '#fff', marginTop: '10px' }}>MEET THE COACHES</h2>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+                {[
+                  { name: "REX STERLING", role: "Head of Strength", bio: "Former national weightlifting champion. Heavy compound specialist." },
+                  { name: "ELENA VLASOV", role: "Director of Mobility", bio: "Olympic weightlifting specialist. Focuses on kinetics and recovery." },
+                  { name: "MARCUS THORNE", role: "Tactical Conditioning", bio: "Ex-military stamina coach. Focuses on HIIT work and GPP capacity." }
+                ].map((coach, idx) => (
+                  <div key={idx} className="titanium-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '320px', overflow: 'hidden' }}>
+                    <div style={{ padding: '24px', background: 'linear-gradient(135deg, #1f1f2e 0%, #111116 100%)' }}>
+                      <h4 style={{ color: '#fff', fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>{coach.name}</h4>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 'bold' }}>{coach.role}</span>
+                    </div>
+                    <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{coach.bio}</p>
+                      <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-secondary" style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>BOOK CONSULTATION</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Footer */}
+            <footer style={{ backgroundColor: '#050507', borderTop: '1px solid rgba(255, 255, 255, 0.05)', padding: '60px 24px 30px 24px' }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '24px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <div style={{ backgroundColor: 'var(--primary)', borderRadius: '6px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Flame size={16} color="#fff" />
+                    </div>
+                    <span className="text-display" style={{ fontSize: '1.4rem', color: '#fff' }}>DO HARD</span>
+                  </div>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '300px' }}>DO HARD Gym Inc. Full-stack Python Flask implementation.</p>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <p>Training Base: 420 Heavy Duty Blvd, Metropolis</p>
+                  <p>Support: developer@dohardgym.com</p>
+                </div>
+              </div>
+            </footer>
+
+            {/* Toast notification panel */}
+            <div className="toast-container">
+              {toasts.map((t) => (
+                <div key={t.id} className="toast">
+                  <div style={{ backgroundColor: 'rgba(255, 87, 34, 0.15)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>✔</div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)', letterSpacing: '0.05em' }}>{t.title}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#fff', marginTop: '2px' }}>{t.message}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Join Modal */}
+            {isJoinModalOpen && (
+              <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setIsJoinModalOpen(false)}>
+                <div className="titanium-card pulse-glow" style={{ width: '100%', maxWidth: '480px', backgroundColor: '#0a0a0f', border: '2px solid var(--primary)', borderRadius: '12px', padding: '32px', position: 'relative' }} onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setIsJoinModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', backgroundColor: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '1.4rem', cursor: 'pointer' }}>✕</button>
+                  {isJoinSuccess ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}>
+                      <span style={{ fontSize: '4rem', display: 'block', marginBottom: '16px' }}>💪</span>
+                      <h3 className="text-display shimmer-text" style={{ fontSize: '2rem', marginBottom: '8px' }}>REGISTRATION SENT</h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Telemetries synced on Flask web application.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-display" style={{ fontSize: '2rem', color: '#fff', marginBottom: '6px' }}>ENTER THE SYSTEM</h3>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>Input your parameters to get started.</p>
+                      <form onSubmit={handleJoinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '6px' }}>FULL NAME</label>
+                          <input type="text" required placeholder="Connor McGregor" value={joinForm.name} onChange={e => setJoinForm(prev => ({ ...prev, name: e.target.value }))} style={{ width: '100%', backgroundColor: '#121217', border: '1px solid rgba(255,255,255,0.08)', padding: '12px', borderRadius: '6px', color: '#fff', outline: 'none' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '6px' }}>EMAIL</label>
+                          <input type="email" required placeholder="connor@gym.com" value={joinForm.email} onChange={e => setJoinForm(prev => ({ ...prev, email: e.target.value }))} style={{ width: '100%', backgroundColor: '#121217', border: '1px solid rgba(255,255,255,0.08)', padding: '12px', borderRadius: '6px', color: '#fff', outline: 'none' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '6px' }}>MEMBERSHIP</label>
+                          <select value={joinForm.tier} onChange={e => setJoinForm(prev => ({ ...prev, tier: e.target.value }))} style={{ width: '100%', backgroundColor: '#121217', border: '1px solid rgba(255,255,255,0.08)', padding: '12px', borderRadius: '6px', color: '#fff', outline: 'none', cursor: 'pointer' }}>
+                            <option value="trial">3-DAY FREE TRIAL</option>
+                            <option value="steel">STEEL TIER ($49/mo)</option>
+                            <option value="titanium">TITANIUM TIER ($79/mo)</option>
+                            <option value="black_diamond">BLACK DIAMOND ($149/mo)</option>
+                          </select>
+                        </div>
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '0.9rem', fontWeight: '700', marginTop: '10px' }}>SUBMIT REGISTRATION</button>
+                      </form>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
+        );
+      }
+
+      // Root initialization
+      const container = document.getElementById('root');
+      const root = createRoot(container);
+      root.render(<App />);
+    </script>
+  </body>
+</html>
