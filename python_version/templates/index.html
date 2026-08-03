@@ -21,6 +21,7 @@
         "imports": {
           "react": "https://esm.sh/react@18.2.0",
           "react-dom": "https://esm.sh/react-dom@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
           "three": "https://esm.sh/three@0.160.0",
           "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=three,react,react-dom",
           "@react-three/drei": "https://esm.sh/@react-three/drei@9.93.0?external=three,react,react-dom,@react-three/fiber",
@@ -37,9 +38,9 @@
     <div id="root"></div>
 
     {% raw %}
-    <script type="text/babel" data-type="module">
+    <script type="text/babel" data-type="module" data-presets="react">
       import React, { useState, useEffect, useRef } from 'react';
-      import { createRoot } from 'react-dom';
+      import { createRoot } from 'react-dom/client';
       import { Canvas, useFrame, useThree } from '@react-three/fiber';
       import { OrbitControls, Center } from '@react-three/drei';
       import * as THREE from 'three';
