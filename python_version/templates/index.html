@@ -36,6 +36,7 @@
   <body>
     <div id="root"></div>
 
+    {% raw %}
     <script type="text/babel" data-type="module">
       import React, { useState, useEffect, useRef } from 'react';
       import { createRoot } from 'react-dom';
@@ -883,5 +884,6 @@
       const root = createRoot(container);
       root.render(<App />);
     </script>
+    {% endraw %}
   </body>
 </html>
