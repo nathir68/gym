@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ff5722'/><text x='15' y='65' fill='%23ffffff' font-family='sans-serif' font-weight='bold' font-size='45'>DH</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="DO HARD Gym - Immersive 3D Python Flask-Powered fitness training facility. Features interactive 3D WebGL models, mouse-following holographic cards, and scroll-responsive 3D depth grids." />
-    <title>DO HARD Gym | Immersive 3D Portal</title>
+    <meta name="description" content="DO HARD Gym - Premium Python Flask-Powered fitness training facility. Features elite coaching and interactive 3D WebGL dumbbell visualizer." />
+    <title>DO HARD Gym | Python Web Portal</title>
     
     <!-- Google Fonts: Bebas Neue, Space Grotesk, Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +21,6 @@
         "imports": {
           "react": "https://esm.sh/react@18.2.0",
           "react-dom": "https://esm.sh/react-dom@18.2.0",
-          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
           "three": "https://esm.sh/three@0.160.0",
           "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.12?external=three,react,react-dom",
           "@react-three/drei": "https://esm.sh/@react-three/drei@9.93.0?external=three,react,react-dom,@react-three/fiber",
@@ -33,40 +32,14 @@
 
     <!-- Babel standalone to compile JSX directly in browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- Diagnostic error listener -->
-    <script>
-      window.onerror = function(message, source, lineno, colno, error) {
-        var root = document.getElementById('root');
-        if (root) {
-          root.innerHTML = '<div style="color: #ff5722; background: #1a0a0a; border: 2px solid #ff5722; padding: 24px; margin: 24px; font-family: monospace; border-radius: 8px; box-shadow: 0 0 30px rgba(255,87,34,0.35); position: relative; z-index: 100000;">' +
-            '<h3 style="margin-top:0; font-family:\'Space Grotesk\',sans-serif;">[FRONTEND COMPILATION / RUNTIME ERROR]</h3>' +
-            '<p style="font-weight: bold; font-size:1.1em; margin-bottom: 8px;">' + message + '</p>' +
-            '<p style="font-size: 0.85em; color: #a1a1aa; margin:0 0 12px 0;">File: ' + source + ' (Line: ' + lineno + ', Col: ' + colno + ')</p>' +
-            (error && error.stack ? '<pre style="font-size: 0.85em; color: #fecaca; white-space: pre-wrap; margin: 0; background: #0c0505; padding: 12px; border-radius: 4px; border:1px solid rgba(255,255,255,0.05); max-height: 400px; overflow-y: auto;">' + error.stack + '</pre>' : '') +
-            '</div>';
-        }
-        return false;
-      };
-      
-      window.addEventListener('unhandledrejection', function(event) {
-        var root = document.getElementById('root');
-        if (root) {
-          root.innerHTML = '<div style="color: #ff5722; background: #1a0a0a; border: 2px solid #ff5722; padding: 24px; margin: 24px; font-family: monospace; border-radius: 8px; box-shadow: 0 0 30px rgba(255,87,34,0.35); position: relative; z-index: 100000;">' +
-            '<h3 style="margin-top:0; font-family:\'Space Grotesk\',sans-serif;">[UNHANDLED PROMISE REJECTION]</h3>' +
-            '<p style="font-weight: bold; font-size:1.1em; margin-bottom: 8px;">Reason: ' + event.reason + '</p>' +
-            '</div>';
-        }
-      });
-    </script>
   </head>
   <body>
     <div id="root"></div>
 
     {% raw %}
-    <script type="text/babel" data-type="module" data-presets="react">
+    <script type="text/babel" data-type="module">
       import React, { useState, useEffect, useRef } from 'react';
-      import { createRoot } from 'react-dom/client';
+      import { createRoot } from 'react-dom';
       import { Canvas, useFrame, useThree } from '@react-three/fiber';
       import { OrbitControls, Center } from '@react-three/drei';
       import * as THREE from 'three';
@@ -86,260 +59,7 @@
         Plus
       } from 'lucide-react';
 
-      // ========================================================
-      // 1. IMMERSIVE 3D BACKGROUNDS & INTERACTION UTILS
-      // ========================================================
-
-      // SpaceGrid3D: A full-screen canvas background rendering a 3D grid in perspective.
-      // The receding horizon shifts with the mouse and speeds up flow with scroll.
-      function SpaceGrid3D() {
-        const canvasRef = useRef(null);
-        const scrollY = useRef(0);
-        const mouseX = useRef(0);
-        const mouseY = useRef(0);
-
-        useEffect(() => {
-          const handleScroll = () => {
-            scrollY.current = window.scrollY;
-          };
-          const handleMouseMove = (e) => {
-            mouseX.current = (e.clientX / window.innerWidth) - 0.5;
-            mouseY.current = (e.clientY / window.innerHeight) - 0.5;
-          };
-          
-          window.addEventListener('scroll', handleScroll);
-          window.addEventListener('mousemove', handleMouseMove);
-
-          const canvas = canvasRef.current;
-          if (!canvas) return;
-          const ctx = canvas.getContext('2d');
-          let animationId;
-
-          const resize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-          };
-          resize();
-          window.addEventListener('resize', resize);
-
-          let offset = 0;
-
-          const drawGrid = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw radial glow background centered on the vanishing point
-            const vY = canvas.height * 0.42 + mouseY.current * 60;
-            const vX = canvas.width / 2 + mouseX.current * 140;
-
-            const bgGlow = ctx.createRadialGradient(
-              vX, vY, 0, 
-              canvas.width / 2, canvas.height / 2, 
-              canvas.width * 0.8
-            );
-            bgGlow.addColorStop(0, '#0d0d12');
-            bgGlow.addColorStop(1, '#050507');
-            ctx.fillStyle = bgGlow;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Scroll speed factor
-            const scrollFactor = 1.0 + (scrollY.current * 0.005);
-            offset = (offset + scrollFactor) % 40;
-
-            ctx.strokeStyle = 'rgba(255, 87, 34, 0.08)'; // orange grid lines
-            ctx.lineWidth = 1;
-
-            // 1. Perspective vertical lines (radiating from horizon)
-            const numLines = 36;
-            for (let i = 0; i <= numLines; i++) {
-              const fraction = i / numLines;
-              const targetX = canvas.width * (-0.5 + fraction * 2.0); // wide projection bottom
-              ctx.beginPath();
-              ctx.moveTo(vX, vY);
-              ctx.lineTo(targetX, canvas.height);
-              ctx.stroke();
-            }
-
-            // 2. Perspective depth lines (moving forward logarithmically)
-            const numDepth = 15;
-            for (let i = 0; i < numDepth; i++) {
-              const depth = (i * 40 + offset) / (numDepth * 40);
-              const relativeY = Math.pow(depth, 2.5); // perspective compression
-              const lineY = vY + (canvas.height - vY) * relativeY;
-
-              ctx.strokeStyle = `rgba(255, 87, 34, ${relativeY * 0.15})`;
-              ctx.beginPath();
-              ctx.moveTo(0, lineY);
-              ctx.lineTo(canvas.width, lineY);
-              ctx.stroke();
-            }
-
-            animationId = requestAnimationFrame(drawGrid);
-          };
-
-          drawGrid();
-
-          return () => {
-            window.removeEventListener('scroll', handleScroll);
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('resize', resize);
-            cancelAnimationFrame(animationId);
-          };
-        }, []);
-
-        return (
-          <canvas 
-            ref={canvasRef} 
-            style={{ 
-              position: 'fixed', 
-              inset: 0, 
-              zIndex: -2, 
-              pointerEvents: 'none' 
-            }} 
-          />
-        );
-      }
-
-      // Tilt3D: React component wrapper that applies 3D transforms based on cursor tilt coordinates.
-      function Tilt3D({ children, className = '', style = {} }) {
-        const cardRef = useRef(null);
-        const [tiltStyle, setTiltStyle] = useState({});
-
-        const handleMouseMove = (e) => {
-          const card = cardRef.current;
-          if (!card) return;
-          const rect = card.getBoundingClientRect();
-          
-          // Normalized coordinate offset (-0.5 to 0.5)
-          const x = (e.clientX - rect.left) / rect.width - 0.5;
-          const y = (e.clientY - rect.top) / rect.height - 0.5;
-          
-          // Max tilt angle parameters: 12 degrees
-          const rotateX = (-y * 12).toFixed(2);
-          const rotateY = (x * 12).toFixed(2);
-          
-          setTiltStyle({
-            transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
-            borderColor: 'var(--border-metal-active)',
-            boxShadow: `0 20px 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 87, 34, ${Math.abs(x) * 0.3})`
-          });
-        };
-
-        const handleMouseLeave = () => {
-          setTiltStyle({
-            transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
-            borderColor: 'var(--border-metal)',
-            boxShadow: 'var(--shadow-card)'
-          });
-        };
-
-        return (
-          <div 
-            ref={cardRef} 
-            onMouseMove={handleMouseMove} 
-            onMouseLeave={handleMouseLeave} 
-            className={className}
-            style={{ 
-              transition: 'transform 0.15s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.15s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.15s',
-              transformStyle: 'preserve-3d',
-              ...style, 
-              ...tiltStyle 
-            }}
-          >
-            {children}
-          </div>
-        );
-      }
-
-      // Scroll Reveal Component (using Intersection Observer)
-      function ScrollReveal({ children, className = '', type = 'reveal-up', delay = '' }) {
-        const ref = useRef(null);
-        const [isVisible, setIsVisible] = useState(false);
-
-        useEffect(() => {
-          const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-              setIsVisible(true);
-              observer.unobserve(entry.target);
-            }
-          }, { threshold: 0.1 });
-
-          if (ref.current) {
-            observer.observe(ref.current);
-          }
-          return () => observer.disconnect();
-        }, []);
-
-        return (
-          <div 
-            ref={ref} 
-            className={`reveal ${type} ${delay} ${isVisible ? 'is-visible' : ''} ${className}`}
-            style={{ transformStyle: 'preserve-3d' }}
-          >
-            {children}
-          </div>
-        );
-      }
-
-      // Count Up Component for counting statistics numbers
-      function CountUp({ end, duration = 1500, suffix = '' }) {
-        const ref = useRef(null);
-        const [count, setCount] = useState(0);
-        const [hasStarted, setHasStarted] = useState(false);
-
-        useEffect(() => {
-          const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
-              setHasStarted(true);
-              observer.unobserve(entry.target);
-            }
-          }, { threshold: 0.1 });
-
-          if (ref.current) observer.observe(ref.current);
-          return () => observer.disconnect();
-        }, []);
-
-        useEffect(() => {
-          if (!hasStarted) return;
-          const endNum = parseInt(end.replace(/[^0-9]/g, '')) || 0;
-          if (endNum === 0) {
-            setCount(end);
-            return;
-          }
-          
-          let start = 0;
-          const startTime = performance.now();
-
-          const updateCount = (now) => {
-            const elapsed = now - startTime;
-            const progress = Math.min(1, elapsed / duration);
-            
-            // Ease out quad formula
-            const easeProgress = progress * (2 - progress);
-            const current = Math.floor(easeProgress * endNum);
-            
-            setCount(current);
-
-            if (progress < 1) {
-              requestAnimationFrame(updateCount);
-            } else {
-              setCount(endNum);
-            }
-          };
-
-          requestAnimationFrame(updateCount);
-        }, [hasStarted, end, duration]);
-
-        return (
-          <span ref={ref} style={{ fontFamily: 'monospace' }}>
-            {count.toLocaleString()}{suffix}
-          </span>
-        );
-      }
-
-      // ========================================================
-      // 2. 3D DUMBBELL MODEL
-      // ========================================================
-
+      // 1. Procedural 3D Dumbbell Component (Same clean design, no orange wireframe circles)
       function DumbbellMesh({ sizeMode, neonColor }) {
         const groupRef = useRef();
         const { mouse } = useThree();
@@ -475,10 +195,7 @@
         );
       }
 
-      // ========================================================
-      // 3. WORKOUT PLANNER
-      // ========================================================
-
+      // 2. Workout Split Planner (Communicates with Python Flask API)
       function WorkoutPlanner() {
         const [activeGoal, setActiveGoal] = useState('SHRED');
         const [activeFreq, setActiveFreq] = useState('dedicated');
@@ -510,7 +227,7 @@
         const currentTheme = goals[activeGoal];
 
         return (
-          <div style={{ padding: '32px', border: 'none' }}>
+          <div className="titanium-card" style={{ padding: '32px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
             <div style={{ textAlign: 'center', marginBottom: '28px' }}>
               <span className="badge" style={{ backgroundColor: `${currentTheme.accent}20`, color: currentTheme.accent, border: `1px solid ${currentTheme.accent}40`, marginBottom: '12px' }}>PYTHON API RESOLVED</span>
               <h3 className="text-display" style={{ fontSize: '2.5rem', marginBottom: '8px', color: '#fff' }}>{currentTheme.title}</h3>
@@ -529,7 +246,7 @@
               ))}
             </div>
 
-            <div style={{ display: 'flex', justifycontent: 'center', gap: '12px', marginBottom: '32px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '32px', flexWrap: 'wrap' }}>
               {['rookie', 'dedicated', 'beast'].map((freq) => (
                 <button key={freq} onClick={() => setActiveFreq(freq)} style={{
                   backgroundColor: activeFreq === freq ? 'var(--primary)' : '#121217',
@@ -545,22 +262,18 @@
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
                 {plan.map((p, idx) => (
-                  <ScrollReveal key={idx} type="reveal-scale" delay={`delay-${(idx + 1) * 100}`}>
-                    <Tilt3D className="titanium-card" style={{ height: '100%' }}>
-                      <div style={{ padding: '24px', position: 'relative', overflow: 'hidden', height: '100%' }}>
-                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: currentTheme.accent }} />
-                        <h4 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '16px', fontFamily: 'var(--font-heading)' }}>{p.day}</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {p.exercises.map((ex, exIdx) => (
-                            <div key={exIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
-                              <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: '500' }}>{ex.name}</span>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>{ex.sets} × {ex.reps}</span>
-                            </div>
-                          ))}
+                  <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', backgroundColor: currentTheme.accent }} />
+                    <h4 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '16px', fontFamily: 'var(--font-heading)' }}>{p.day}</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {p.exercises.map((ex, exIdx) => (
+                        <div key={exIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '8px', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+                          <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: '500' }}>{ex.name}</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>{ex.sets} × {ex.reps}</span>
                         </div>
-                      </div>
-                    </Tilt3D>
-                  </ScrollReveal>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -568,10 +281,7 @@
         );
       }
 
-      // ========================================================
-      // 4. BIOMETRIC CALCULATOR
-      // ========================================================
-
+      // 3. BMI & Macro Calculator (Communicates with Python Flask API)
       function MacroCalculator() {
         const [weight, setWeight] = useState(80);
         const [height, setHeight] = useState(180);
@@ -581,9 +291,8 @@
         const [goal, setGoal] = useState('maintain');
 
         const [results, setResults] = useState({ bmi: 0, bmiStatus: 'Normal', calories: 2800, protein: 176, carbs: 320, fat: 77 });
-        const [displayCalories, setDisplayCalories] = useState(0);
 
-        // Fetch inputs mapping calculations in python server
+        // Query the Flask API on input changes
         useEffect(() => {
           fetch('/api/calculate-macros', {
             method: 'POST',
@@ -596,31 +305,6 @@
           });
         }, [weight, height, age, gender, activity, goal]);
 
-        // Easing interpolation timer for smoothly counting calories numbers
-        useEffect(() => {
-          let startVal = displayCalories;
-          const endVal = results.calories;
-          if (startVal === endVal) return;
-
-          const stepsTime = 300;
-          const startStamp = performance.now();
-
-          const animateCalories = (now) => {
-            const progress = Math.min(1, (now - startStamp) / stepsTime);
-            const easeVal = progress * (2 - progress);
-            const current = Math.floor(startVal + (endVal - startVal) * easeVal);
-            setDisplayCalories(current);
-
-            if (progress < 1) {
-              requestAnimationFrame(animateCalories);
-            } else {
-              setDisplayCalories(endVal);
-            }
-          };
-
-          requestAnimationFrame(animateCalories);
-        }, [results.calories]);
-
         const getBmiColor = () => {
           if (results.bmiStatus === 'Normal') return '#d4ff00';
           if (results.bmiStatus === 'Underweight') return '#00f2fe';
@@ -629,7 +313,7 @@
         };
 
         return (
-          <div style={{ border: 'none' }}>
+          <div className="titanium-card" style={{ padding: '32px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <span className="badge badge-primary" style={{ marginBottom: '12px' }}>PYTHON BACKEND EQUATIONS</span>
               <h3 className="text-display" style={{ fontSize: '2.5rem', marginBottom: '8px', color: '#fff' }}>FUEL & MACRO CALCULATOR</h3>
@@ -637,153 +321,145 @@
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
-              
-              {/* Form Controls Card (Interactive 3D) */}
-              <Tilt3D className="titanium-card" style={{ padding: '32px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>BIOLOGICAL GENDER</label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      {['male', 'female'].map(g => (
-                        <button key={g} onClick={() => setGender(g)} style={{
-                          flex: 1, backgroundColor: gender === g ? 'rgba(255, 87, 34, 0.1)' : 'transparent',
-                          border: gender === g ? '2px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.06)',
-                          borderRadius: '8px', color: gender === g ? '#fff' : 'var(--text-secondary)', padding: '10px', cursor: 'pointer',
-                          fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', fontFamily: 'var(--font-heading)'
-                        }}>{g}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>WEIGHT (KG)</span>
-                      <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{weight} kg</span>
-                    </div>
-                    <input type="range" min="40" max="150" value={weight} onChange={e => setWeight(parseInt(e.target.value))} className="custom-range" />
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>HEIGHT (CM)</span>
-                      <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{height} cm</span>
-                    </div>
-                    <input type="range" min="120" max="220" value={height} onChange={e => setHeight(parseInt(e.target.value))} className="custom-range" />
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>AGE (YEARS)</span>
-                      <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{age} yrs</span>
-                    </div>
-                    <input type="range" min="15" max="80" value={age} onChange={e => setAge(parseInt(e.target.value))} className="custom-range" />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>ACTIVITY FACTOR</label>
-                    <select value={activity} onChange={e => setActivity(parseFloat(e.target.value))} style={{
-                      width: '100%', backgroundColor: '#131318', border: '1px solid rgba(255, 255, 255, 0.08)', color: '#fff',
-                      padding: '12px', borderRadius: '8px', outline: 'none', fontSize: '0.9rem', cursor: 'pointer'
-                    }}>
-                      <option value="1.2">Sedentary (No workouts)</option>
-                      <option value="1.375">Light active (1-3 days/wk)</option>
-                      <option value="1.55">Moderate active (3-5 days/wk)</option>
-                      <option value="1.725">Heavy active (6-7 days/wk)</option>
-                      <option value="1.9">Extreme athlete load</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>DIET PATHWAY</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {[
-                        { key: 'lose', label: 'SHRED' },
-                        { key: 'maintain', label: 'MAINTAIN' },
-                        { key: 'gain', label: 'BULK' }
-                      ].map(g => (
-                        <button key={g.key} onClick={() => setGoal(g.key)} style={{
-                          flex: 1, backgroundColor: goal === g.key ? '#ff5722' : 'rgba(255, 255, 255, 0.02)',
-                          border: goal === g.key ? '1px solid #ff5722' : '1px solid rgba(255, 255, 255, 0.06)',
-                          color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer'
-                        }}>{g.label}</button>
-                      ))}
-                    </div>
+              {/* Form Controls */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>BIOLOGICAL GENDER</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {['male', 'female'].map(g => (
+                      <button key={g} onClick={() => setGender(g)} style={{
+                        flex: 1, backgroundColor: gender === g ? 'rgba(255, 87, 34, 0.1)' : 'transparent',
+                        border: gender === g ? '2px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.06)',
+                        borderRadius: '8px', color: gender === g ? '#fff' : 'var(--text-secondary)', padding: '10px', cursor: 'pointer',
+                        fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', fontFamily: 'var(--font-heading)'
+                      }}>{g}</button>
+                    ))}
                   </div>
                 </div>
-              </Tilt3D>
 
-              {/* Server Results Display Card (Interactive 3D) */}
-              <Tilt3D className="titanium-card" style={{ padding: '32px' }}>
-                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '24px', height: '100%' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <div>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>BODY MASS INDEX (BMI)</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                          <span style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff', fontFamily: 'monospace' }}>{results.bmi}</span>
-                          <span style={{ color: getBmiColor(), fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase' }}>• {results.bmiStatus}</span>
-                        </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>WEIGHT (KG)</span>
+                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{weight} kg</span>
+                  </div>
+                  <input type="range" min="40" max="150" value={weight} onChange={e => setWeight(parseInt(e.target.value))} className="custom-range" />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>HEIGHT (CM)</span>
+                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{height} cm</span>
+                  </div>
+                  <input type="range" min="120" max="220" value={height} onChange={e => setHeight(parseInt(e.target.value))} className="custom-range" />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.05em' }}>AGE (YEARS)</span>
+                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: '700', fontFamily: 'monospace' }}>{age} yrs</span>
+                  </div>
+                  <input type="range" min="15" max="80" value={age} onChange={e => setAge(parseInt(e.target.value))} className="custom-range" />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>ACTIVITY FACTOR</label>
+                  <select value={activity} onChange={e => setActivity(parseFloat(e.target.value))} style={{
+                    width: '100%', backgroundColor: '#131318', border: '1px solid rgba(255, 255, 255, 0.08)', color: '#fff',
+                    padding: '12px', borderRadius: '8px', outline: 'none', fontSize: '0.9rem', cursor: 'pointer'
+                  }}>
+                    <option value="1.2">Sedentary (No workouts)</option>
+                    <option value="1.375">Light active (1-3 days/wk)</option>
+                    <option value="1.55">Moderate active (3-5 days/wk)</option>
+                    <option value="1.725">Heavy active (6-7 days/wk)</option>
+                    <option value="1.9">Extreme athlete load</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '0.05em' }}>DIET PATHWAY</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[
+                      { key: 'lose', label: 'SHRED' },
+                      { key: 'maintain', label: 'MAINTAIN' },
+                      { key: 'gain', label: 'BULK' }
+                    ].map(g => (
+                      <button key={g.key} onClick={() => setGoal(g.key)} style={{
+                        flex: 1, backgroundColor: goal === g.key ? '#ff5722' : 'rgba(255, 255, 255, 0.02)',
+                        border: goal === g.key ? '1px solid #ff5722' : '1px solid rgba(255, 255, 255, 0.06)',
+                        color: '#fff', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer'
+                      }}>{g.label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Server Results Display */}
+              <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '24px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>BODY MASS INDEX (BMI)</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                        <span style={{ fontSize: '1.8rem', fontWeight: '800', color: '#fff', fontFamily: 'monospace' }}>{results.bmi}</span>
+                        <span style={{ color: getBmiColor(), fontSize: '0.85rem', fontWeight: 'bold', textTransform: 'uppercase' }}>• {results.bmiStatus}</span>
                       </div>
-                    </div>
-
-                    <div style={{ background: 'linear-gradient(135deg, #181822 0%, #121217 100%)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '20px', textAlign: 'center', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.1em' }}>DAILY ENERGY TARGET</span>
-                      <h2 className="text-display glow-text" style={{ fontSize: '3rem', color: 'var(--primary)', marginTop: '8px', letterSpacing: '0.02em' }}>{displayCalories} <span style={{ fontSize: '1rem', color: '#fff', fontFamily: 'var(--font-heading)' }}>KCAL</span></h2>
                     </div>
                   </div>
 
-                  <div>
-                    <h4 style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '16px', fontWeight: 'bold', letterSpacing: '0.05em' }}>MACRONUTRIENTS (calculated on server)</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
-                          <span style={{ color: '#fff', fontWeight: 'bold' }}>PROTEIN</span>
-                          <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.protein}g</span>
-                        </div>
-                        <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${(results.protein * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px', transition: 'width 0.4s ease' }} />
-                        </div>
-                      </div>
+                  <div style={{ background: 'linear-gradient(135deg, #181822 0%, #121217 100%)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '20px', textAlign: 'center', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 'bold', letterSpacing: '0.1em' }}>DAILY ENERGY TARGET</span>
+                    <h2 className="text-display glow-text" style={{ fontSize: '3rem', color: 'var(--primary)', marginTop: '8px', letterSpacing: '0.02em' }}>{results.calories} <span style={{ fontSize: '1rem', color: '#fff', fontFamily: 'var(--font-heading)' }}>KCAL</span></h2>
+                  </div>
+                </div>
 
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
-                          <span style={{ color: '#fff', fontWeight: 'bold' }}>CARBOHYDRATES</span>
-                          <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.carbs}g</span>
-                        </div>
-                        <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${(results.carbs * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: '#d4ff00', borderRadius: '4px', transition: 'width 0.4s ease' }} />
-                        </div>
+                <div>
+                  <h4 style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '16px', fontWeight: 'bold', letterSpacing: '0.05em' }}>MACRONUTRIENTS (calculated on server)</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+                        <span style={{ color: '#fff', fontWeight: 'bold' }}>PROTEIN</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.protein}g</span>
                       </div>
+                      <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${(results.protein * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: 'var(--primary)', borderRadius: '4px' }} />
+                      </div>
+                    </div>
 
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
-                          <span style={{ color: '#fff', fontWeight: 'bold' }}>FAT</span>
-                          <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.fat}g</span>
-                        </div>
-                        <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${(results.fat * 9 / results.calories) * 100}%`, height: '100%', backgroundColor: '#00f2fe', borderRadius: '4px', transition: 'width 0.4s ease' }} />
-                        </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+                        <span style={{ color: '#fff', fontWeight: 'bold' }}>CARBOHYDRATES</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.carbs}g</span>
+                      </div>
+                      <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${(results.carbs * 4 / results.calories) * 100}%`, height: '100%', backgroundColor: '#d4ff00', borderRadius: '4px' }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '6px' }}>
+                        <span style={{ color: '#fff', fontWeight: 'bold' }}>FAT</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{results.fat}g</span>
+                      </div>
+                      <div style={{ height: '8px', backgroundColor: '#131317', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${(results.fat * 9 / results.calories) * 100}%`, height: '100%', backgroundColor: '#00f2fe', borderRadius: '4px' }} />
                       </div>
                     </div>
                   </div>
                 </div>
-              </Tilt3D>
-
+              </div>
             </div>
           </div>
         );
       }
 
-      // ========================================================
-      // 5. CLASS SCHEDULER
-      // ========================================================
-
+      // 4. Class Scheduler (Communicates with Python Flask API)
       function ClassScheduler({ onBookSpot }) {
         const [selectedDay, setSelectedDay] = useState('MONDAY');
         const [schedule, setSchedule] = useState({});
         const [bookedClasses, setBookedClasses] = useState([]);
         const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 
+        // Pull initial classes from Flask
         useEffect(() => {
           fetch('/api/classes')
           .then(res => res.json())
@@ -815,7 +491,7 @@
         const currentClasses = schedule[selectedDay] || [];
 
         return (
-          <div style={{ padding: '32px', border: 'none' }}>
+          <div className="titanium-card" style={{ padding: '32px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <span className="badge badge-secondary" style={{ marginBottom: '12px' }}>FLASK SESSION ENGINE</span>
               <h3 className="text-display" style={{ fontSize: '2.5rem', marginBottom: '8px', color: '#fff' }}>CLASS BOOKING PORTAL</h3>
@@ -834,47 +510,44 @@
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {currentClasses.map((cls, idx) => {
+              {currentClasses.map((cls) => {
                 const isBooked = bookedClasses.includes(cls.id);
                 const spotsLeft = cls.capacity - cls.booked;
                 const percentage = (cls.booked / cls.capacity) * 100;
                 const isFull = spotsLeft <= 0;
 
                 return (
-                  <ScrollReveal key={cls.id} type="reveal-up" delay={`delay-${(idx + 1) * 100}`}>
-                    <Tilt3D className="titanium-card">
-                      <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        border: 'none', borderRadius: '8px', padding: '20px', flexWrap: 'wrap', gap: '16px', transition: 'all 0.3s ease'
-                      }}>
-                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flex: '1 1 300px' }}>
-                          <div style={{ minWidth: '70px', textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.08)', paddingRight: '20px', color: 'var(--primary)', fontFamily: 'monospace', fontWeight: '700', fontSize: '0.85rem' }}>{cls.time.split(' - ')[0]}</div>
-                          <div>
-                            <h4 style={{ color: '#fff', fontSize: '1.15rem', marginBottom: '4px', fontFamily: 'var(--font-heading)' }}>{cls.name}</h4>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Coach: <strong style={{ color: '#fff' }}>{cls.instructor}</strong></span>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '180px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                            <span style={{ color: isFull ? '#ef4444' : 'var(--text-secondary)' }}>{isFull ? 'FULLY BOOKED' : `${spotsLeft} spots available`}</span>
-                            <span style={{ color: '#fff', fontFamily: 'monospace' }}>{cls.booked}/{cls.capacity}</span>
-                          </div>
-                          <div style={{ height: '6px', backgroundColor: '#131317', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: isBooked ? 'var(--primary)' : isFull ? '#ef4444' : '#d4ff00', borderRadius: '3px', transition: 'width 0.5s ease' }} />
-                          </div>
-                        </div>
-
-                        <button disabled={isBooked || isFull} onClick={() => handleBook(selectedDay, cls.id, cls.name, cls.instructor)} style={{
-                          backgroundColor: isBooked ? 'rgba(212, 255, 0, 0.15)' : isFull ? '#222' : 'transparent',
-                          border: isBooked ? '1px solid #d4ff00' : isFull ? '1px solid #333' : '1px solid var(--primary)',
-                          color: isBooked ? '#d4ff00' : isFull ? '#555' : '#fff', padding: '10px 24px', borderRadius: '6px',
-                          cursor: isBooked || isFull ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: '700',
-                          letterSpacing: '0.05em', transition: 'var(--transition-smooth)'
-                        }}>{isBooked ? '✓ SELECTED' : isFull ? 'LOCKED' : 'BOOK SPOT'}</button>
+                  <div key={cls.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    backgroundColor: 'rgba(255, 255, 255, 0.01)', border: isBooked ? '1px solid var(--primary-glow)' : '1px solid rgba(255, 255, 255, 0.04)',
+                    borderRadius: '8px', padding: '20px', flexWrap: 'wrap', gap: '16px'
+                  }}>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flex: '1 1 300px' }}>
+                      <div style={{ minWidth: '70px', textAlign: 'center', borderRight: '1px solid rgba(255, 255, 255, 0.08)', paddingRight: '20px', color: 'var(--primary)', fontFamily: 'monospace', fontWeight: '700', fontSize: '0.85rem' }}>{cls.time.split(' - ')[0]}</div>
+                      <div>
+                        <h4 style={{ color: '#fff', fontSize: '1.15rem', marginBottom: '4px', fontFamily: 'var(--font-heading)' }}>{cls.name}</h4>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Coach: <strong style={{ color: '#fff' }}>{cls.instructor}</strong></span>
                       </div>
-                    </Tilt3D>
-                  </ScrollReveal>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '180px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                        <span style={{ color: isFull ? '#ef4444' : 'var(--text-secondary)' }}>{isFull ? 'FULLY BOOKED' : `${spotsLeft} spots available`}</span>
+                        <span style={{ color: '#fff', fontFamily: 'monospace' }}>{cls.booked}/{cls.capacity}</span>
+                      </div>
+                      <div style={{ height: '6px', backgroundColor: '#131317', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: isBooked ? 'var(--primary)' : isFull ? '#ef4444' : '#d4ff00', borderRadius: '3px' }} />
+                      </div>
+                    </div>
+
+                    <button disabled={isBooked || isFull} onClick={() => handleBook(selectedDay, cls.id, cls.name, cls.instructor)} style={{
+                      backgroundColor: isBooked ? 'rgba(212, 255, 0, 0.15)' : isFull ? '#222' : 'transparent',
+                      border: isBooked ? '1px solid #d4ff00' : isFull ? '1px solid #333' : '1px solid var(--primary)',
+                      color: isBooked ? '#d4ff00' : isFull ? '#555' : '#fff', padding: '10px 24px', borderRadius: '6px',
+                      cursor: isBooked || isFull ? 'default' : 'pointer', fontSize: '0.8rem', fontWeight: '700',
+                      letterSpacing: '0.05em', transition: 'var(--transition-smooth)'
+                    }}>{isBooked ? '✓ SELECTED' : isFull ? 'LOCKED' : 'BOOK SPOT'}</button>
+                  </div>
                 );
               })}
             </div>
@@ -882,10 +555,7 @@
         );
       }
 
-      // ========================================================
-      // 6. TRANSFORMATION SLIDER
-      // ========================================================
-
+      // 5. Before/After Transformation Slider
       function TransformationSlider() {
         const [sliderPos, setSliderPos] = useState(50);
         const containerRef = useRef(null);
@@ -956,23 +626,18 @@
               <h3 className="text-display" style={{ fontSize: '2.2rem', color: '#fff', marginBottom: '8px' }}>MEMBER TRANSFORMATION</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto' }}>Drag the central slider handle to check out our 12-week powerlifting transformation program.</p>
             </div>
-            
-            {/* 3D Tilt Wrapper around slider */}
-            <Tilt3D className="slider-container" onTouchStart={handleMouseDown} onMouseDown={handleMouseDown} style={{ cursor: 'ew-resize' }}>
+            <div ref={containerRef} className="slider-container" onTouchStart={handleMouseDown} onMouseDown={handleMouseDown} style={{ cursor: 'ew-resize' }}>
               <div className="slider-before"><BeforeVisual /></div>
               <div className="slider-after" style={{ clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }}><AfterVisual /></div>
               <div className="slider-handle" style={{ left: `${sliderPos}%` }}>
                 <div className="slider-handle-button">◀ ▶</div>
               </div>
-            </Tilt3D>
+            </div>
           </div>
         );
       }
 
-      // ========================================================
-      // 7. MAIN LAYOUT
-      // ========================================================
-
+      // 6. Main App Component
       function App() {
         const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
         const [isJoinSuccess, setIsJoinSuccess] = useState(false);
@@ -1012,12 +677,9 @@
         return (
           <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             
-            {/* Immersive 3D Space Grid Background */}
-            <SpaceGrid3D />
-            
             {/* Header */}
             <header style={{
-              position: 'sticky', top: 0, backgroundColor: 'rgba(7, 7, 9, 0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              position: 'sticky', top: 0, backgroundColor: 'rgba(7, 7, 9, 0.9)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
               borderBottom: '1px solid rgba(255, 255, 255, 0.05)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100
             }}>
               <div onClick={() => handleScrollToSection('hero')} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -1043,58 +705,29 @@
             </header>
 
             {/* Hero Section */}
-            <section id="hero" style={{ padding: '80px 24px', position: 'relative', borderBottom: '1px solid rgba(255, 255, 255, 0.03)', overflow: 'hidden' }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                
-                {/* Hero left details */}
-                <ScrollReveal type="reveal-left">
-                  <div>
-                    <span className="badge badge-primary" style={{ width: 'fit-content', marginBottom: '12px' }}>⚡ IMMERSIVE 3D MATRIX</span>
-                    <h1 className="text-display" style={{ fontSize: 'clamp(3rem, 6vw, 4.8rem)', lineHeight: '0.9', color: '#fff' }}>
-                      STRENGTH IS EARNED.<br />
-                      <span className="shimmer-text">DO HARD.</span>
-                    </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.5', maxWidth: '520px', marginTop: '16px' }}>
-                      A complete 3D viewport experience. Move your cursor to tilt holographic panels, and scroll to accelerate the background vector grid.
-                    </p>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px' }}>
-                      <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-primary">CLAIM 3-DAY PASS</button>
-                      <button onClick={() => handleScrollToSection('classes')} className="btn btn-secondary">VIEW CLASS BOARD</button>
-                    </div>
+            <section id="hero" className="hero-gradient" style={{ padding: '60px 24px', position: 'relative', borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+              <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'center' }}>
+                <div>
+                  <span className="badge badge-primary" style={{ width: 'fit-content', marginBottom: '12px' }}>⚡ PYTHON FLASK BACKEND ACTIVE</span>
+                  <h1 className="text-display" style={{ fontSize: 'clamp(3rem, 6vw, 4.8rem)', lineHeight: '0.9', color: '#fff' }}>
+                    STRENGTH IS EARNED.<br />
+                    <span className="shimmer-text">DO HARD.</span>
+                  </h1>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', lineHeight: '1.5', maxWidth: '520px', marginTop: '16px' }}>
+                    A full-stack implementation running on a Python web server. Explore interactive WebGL rendering powered by Flask API endpoints.
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '24px' }}>
+                    <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-primary">CLAIM 3-DAY PASS</button>
+                    <button onClick={() => handleScrollToSection('classes')} className="btn btn-secondary">VIEW CLASS BOARD</button>
                   </div>
-                </ScrollReveal>
+                </div>
 
-                {/* Hero right interactive canvas */}
-                <ScrollReveal type="reveal-right">
-                  <Tilt3D className="titanium-card" style={{ height: '420px', padding: '0', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, #111116 0%, #070709 100%)', border: '1px solid rgba(255, 87, 34, 0.15)' }}>
-                    <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 5 }}>
-                      <span className="badge badge-secondary" style={{ animation: 'pulseGlow 2s infinite ease-in-out' }}>INTERACTIVE R3F WEBGL</span>
-                    </div>
-                    <Dumbbell3D />
-                  </Tilt3D>
-                </ScrollReveal>
-              </div>
-            </section>
-
-            {/* Stats Counter Section */}
-            <section style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', position: 'relative', zIndex: 2 }}>
-              <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px' }}>
-                {[
-                  { value: '15000', label: 'ACTIVE DISCIPLES', suffix: '+', desc: 'Pushing limits daily' },
-                  { value: '50', label: 'ELITE STRENGTH COACHES', suffix: '+', desc: 'Olympic & powerlifting athletes' },
-                  { value: '24/7', isStatic: true, label: 'ZERO CLOSED HOURS', desc: 'No excuses, train anytime' },
-                  { value: '5', label: 'METROPOLIS ZONES', suffix: '', desc: 'Access any training ground' }
-                ].map((stat, idx) => (
-                  <ScrollReveal key={idx} type="reveal-scale" delay={`delay-${(idx + 1) * 100}`}>
-                    <Tilt3D className="titanium-card" style={{ padding: '24px', border: '1px solid rgba(255, 255, 255, 0.03)', textAlign: 'center', height: '100%' }}>
-                      <h2 className="text-display" style={{ fontSize: '2.5rem', color: 'var(--primary)' }}>
-                        {stat.isStatic ? stat.value : <CountUp end={stat.value} suffix={stat.suffix} />}
-                      </h2>
-                      <h4 style={{ fontSize: '0.85rem', color: '#fff', margin: '4px 0 2px 0', letterSpacing: '0.05em' }}>{stat.label}</h4>
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{stat.desc}</p>
-                    </div>
-                  </ScrollReveal>
-                ))}
+                <div className="titanium-card" style={{ height: '420px', padding: '0', position: 'relative', overflow: 'hidden', background: 'radial-gradient(circle at center, #111116 0%, #070709 100%)', border: '1px solid rgba(255, 87, 34, 0.15)' }}>
+                  <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 5 }}>
+                    <span className="badge badge-secondary" style={{ animation: 'pulseGlow 2s infinite ease-in-out' }}>INTERACTIVE R3F WEBGL</span>
+                  </div>
+                  <Dumbbell3D />
+                </div>
               </div>
             </section>
 
@@ -1111,46 +744,36 @@
                   { title: 'CRYO COOLING CHAMBER', desc: 'Sub-zero saunas at -110°C to accelerate muscular repair.' },
                   { title: 'PROTEIN BAR AND AMINOS', desc: 'Clean protein formulas and raw hydration mixes.' }
                 ].map((item, idx) => (
-                  <ScrollReveal key={idx} type="reveal-up" delay={`delay-${(idx + 1) * 100}`}>
-                    <Tilt3D className="titanium-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
-                      <h3 style={{ color: '#fff', fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>{item.title}</h3>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
-                    </div>
-                  </Tilt3D>
-                </ScrollReveal>
+                  <div key={idx} className="titanium-card" style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h3 style={{ color: '#fff', fontSize: '1.15rem', fontFamily: 'var(--font-heading)' }}>{item.title}</h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{item.desc}</p>
+                  </div>
+                ))}
               </div>
             </section>
 
             {/* Splits */}
-            <section id="splits" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+            <section id="splits" style={{ padding: '80px 24px', backgroundColor: '#0a0a0e', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
               <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <ScrollReveal type="reveal-scale">
-                  <WorkoutPlanner />
-                </ScrollReveal>
+                <WorkoutPlanner />
               </div>
             </section>
 
             {/* Classes */}
             <section id="classes" style={{ padding: '80px 24px', maxWidth: '1200px', margin: '0 auto' }}>
-              <ScrollReveal type="reveal-scale">
-                <ClassScheduler onBookSpot={handleBookSpot} />
-              </ScrollReveal>
+              <ClassScheduler onBookSpot={handleBookSpot} />
             </section>
 
             {/* Calculator */}
-            <section id="calculator" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+            <section id="calculator" style={{ padding: '80px 24px', backgroundColor: '#0a0a0e', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
               <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <ScrollReveal type="reveal-scale">
-                  <MacroCalculator />
-                </ScrollReveal>
+                <MacroCalculator />
               </div>
             </section>
 
             {/* Transformation */}
             <section id="transformation" style={{ padding: '80px 24px', maxWidth: '640px', margin: '0 auto' }}>
-              <ScrollReveal type="reveal-up">
-                <TransformationSlider />
-              </ScrollReveal>
+              <TransformationSlider />
             </section>
 
             {/* Trainers */}
@@ -1165,49 +788,17 @@
                   { name: "ELENA VLASOV", role: "Director of Mobility", bio: "Olympic weightlifting specialist. Focuses on kinetics and recovery." },
                   { name: "MARCUS THORNE", role: "Tactical Conditioning", bio: "Ex-military stamina coach. Focuses on HIIT work and GPP capacity." }
                 ].map((coach, idx) => (
-                  <ScrollReveal key={idx} type="reveal-up" delay={`delay-${(idx + 1) * 100}`}>
-                    <Tilt3D className="titanium-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '320px', overflow: 'hidden' }}>
-                      <div style={{ padding: '24px', background: 'linear-gradient(135deg, #1f1f2e 0%, #111116 100%)' }}>
-                        <h4 style={{ color: '#fff', fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>{coach.name}</h4>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 'bold' }}>{coach.role}</span>
-                      </div>
-                      <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{coach.bio}</p>
-                        <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-secondary" style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>BOOK CONSULTATION</button>
-                      </div>
-                    </Tilt3D>
-                  </ScrollReveal>
+                  <div key={idx} className="titanium-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '320px', overflow: 'hidden' }}>
+                    <div style={{ padding: '24px', background: 'linear-gradient(135deg, #1f1f2e 0%, #111116 100%)' }}>
+                      <h4 style={{ color: '#fff', fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>{coach.name}</h4>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--secondary)', fontWeight: 'bold' }}>{coach.role}</span>
+                    </div>
+                    <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5' }}>{coach.bio}</p>
+                      <button onClick={() => setIsJoinModalOpen(true)} className="btn btn-secondary" style={{ width: '100%', padding: '8px', fontSize: '0.75rem' }}>BOOK CONSULTATION</button>
+                    </div>
+                  </div>
                 ))}
-              </div>
-            </section>
-
-            {/* FAQ Section */}
-            <section style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-              <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-                  <span className="badge badge-secondary">SUPPORT BOARD</span>
-                  <h2 className="text-display" style={{ fontSize: '2.5rem', color: '#fff', marginTop: '10px' }}>FREQUENTLY INQUIRED</h2>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {[
-                    { q: "What makes DO HARD Gym different?", a: "We focus on high-performance metrics. RFID logs track bar speed in real-time, feeding progress analytics straight to your portal profile." },
-                    { q: "Can a beginner train at DO HARD?", a: "Absolutely. foundation classes build mechanical consistency under low compound loads before scaling weight targets." },
-                    { q: "Is Cryotherapy included in tiers?", a: "Unlimited access is unlocked on Black Diamond levels. Titanium tier includes two free passes per month." }
-                  ].map((faq, idx) => {
-                    const [isOpen, setIsOpen] = useState(false);
-                    return (
-                      <ScrollReveal key={idx} type="reveal-up" delay={`delay-${(idx + 1) * 100}`}>
-                        <Tilt3D className="titanium-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setIsOpen(!isOpen)}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 style={{ color: '#fff', fontSize: '1.05rem', fontFamily: 'var(--font-heading)' }}>{faq.q}</h4>
-                            <span style={{ fontSize: '1.2rem', color: 'var(--primary)', fontWeight: 'bold' }}>{isOpen ? '−' : '+'}</span>
-                          </div>
-                          {isOpen && <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '12px', lineHeight: '1.5' }}>{faq.a}</p>}
-                        </Tilt3D>
-                      </ScrollReveal>
-                    );
-                  })}
-                </div>
               </div>
             </section>
 
@@ -1234,7 +825,7 @@
             <div className="toast-container">
               {toasts.map((t) => (
                 <div key={t.id} className="toast">
-                  <div style={{ backgroundColor: 'rgba(255, 87, 34, 0.15)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifycontent: 'center', color: 'var(--primary)', justifyContent: 'center' }}>✔</div>
+                  <div style={{ backgroundColor: 'rgba(255, 87, 34, 0.15)', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>✔</div>
                   <div>
                     <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)', letterSpacing: '0.05em' }}>{t.title}</div>
                     <div style={{ fontSize: '0.8rem', color: '#fff', marginTop: '2px' }}>{t.message}</div>
@@ -1245,7 +836,7 @@
 
             {/* Join Modal */}
             {isJoinModalOpen && (
-              <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifycontent: 'center', padding: '20px', justifyContent: 'center' }} onClick={() => setIsJoinModalOpen(false)}>
+              <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setIsJoinModalOpen(false)}>
                 <div className="titanium-card pulse-glow" style={{ width: '100%', maxWidth: '480px', backgroundColor: '#0a0a0f', border: '2px solid var(--primary)', borderRadius: '12px', padding: '32px', position: 'relative' }} onClick={e => e.stopPropagation()}>
                   <button onClick={() => setIsJoinModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', backgroundColor: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '1.4rem', cursor: 'pointer' }}>✕</button>
                   {isJoinSuccess ? (
